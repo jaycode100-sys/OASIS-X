@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OASIS-X — Login</title>
+  <meta name="description" content="Login to OASIS-X Autonomous Fibre Fault Healing System" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/static/oasis.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #060f1a; --bg2: #0b1a2e; --bg3: #10233d;
+      --border: #1a3450; --txt: #e0edf8; --txt2: #7090b0; --txt3: #3d5a7a;
+      --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
+      --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: var(--font); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .login-wrap { width: 100%; max-width: 400px; padding: 24px; }
+    .login-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+      padding: 40px 32px 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .login-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+    .login-logo img { width: 42px; height: 42px; }
+    .login-logo-text .title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .login-logo-text .sub { font-size: 12px; color: var(--txt2); }
+    .login-title { font-size: 14px; font-weight: 600; color: var(--txt2); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--txt2); margin-bottom: 6px; }
+    .form-group input {
+      width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg3); color: var(--txt); font-size: 14px; font-family: var(--font);
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .login-btn {
+      width: 100%; padding: 12px; border-radius: 8px; border: none;
+      background: var(--accent); color: #060f1a; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: var(--font); transition: opacity 0.2s; margin-top: 8px;
+    }
+    .login-btn:hover { opacity: 0.85; }
+    .login-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .login-error { color: var(--red); font-size: 13px; margin-top: 14px; text-align: center; display: none; }
+    .login-error.show { display: block; }
+    .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--txt3); }
+    .login-spinner { display: none; vertical-align: middle; margin-right: 6px; }
+    .login-btn.loading .login-spinner { display: inline-block; }
+    .login-btn.loading .login-text { opacity: 0.6; }
+    .demo-credentials { margin-top: 24px; padding: 12px; border-radius: 8px; background: var(--bg3); font-size: 11px; color: var(--txt3); line-height: 1.6; }
+    .demo-credentials strong { color: var(--txt2); }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="/static/oasis.png" alt="OASIS-X" />
+        <div class="login-logo-text">
+          <div class="title">OASIS-X</div>
+          <div class="sub">Autonomous Fibre Fault Healing System</div>
+        </div>
+      </div>
+      <div class="login-title">Sign in</div>
+      <form id="login-form" autocomplete="off">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="login-btn" id="login-btn">
+          <span class="login-spinner">⏳</span>
+          <span class="login-text">Sign In</span>
+        </button>
+        <div class="login-error" id="login-error"></div>
+      </form>
+      <div class="demo-credentials">
+        <strong>Demo credentials:</strong><br />
+        admin / admin123 <span style="color:var(--txt3)">(superadmin)</span><br />
+        user / user123 <span style="color:var(--txt3)">(user)</span>
+      </div>
+      <div class="login-footer">SWIFT FHS v1.0 &mdash; powered by Swift Solutions</div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const err = document.getElementById('login-error');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) { err.textContent = 'Please enter username and password'; err.classList.add('show'); return; }
+      btn.classList.add('loading');
+      btn.disabled = true;
+      err.classList.remove('show');
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await r.json();
+        if (!r.ok) { err.textContent = data.detail || 'Login failed'; err.classList.add('show'); return; }
+        localStorage.setItem('token', data.access_token);
+        window.location.href = '/';
+      } catch (e) {
+        err.textContent = 'Connection error. Is the server running?';
+        err.classList.add('show');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

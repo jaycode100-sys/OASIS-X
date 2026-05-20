@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OASIS-X — Autonomous Fibre Fault Healing System</title>
+  <meta name="description" content="Real-time autonomous optical fibre network monitoring and fault healing for Nigerian networks" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="icon" type="image/png" href="/static/oasis.png" />
+  <link rel="stylesheet" href="/static/style.css?v=9" />
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="header" id="header">
+  <div class="header-left">
+    <div class="logo">
+      <img src="/static/oasis.png" alt="OASIS-X" class="logo-icon" />
+      <div>
+        <span class="logo-name">OASIS-X</span>
+        <span class="logo-sub">Autonomous Fibre Fault Healing System</span>
+      </div>
+    </div>
+  </div>
+  <div class="header-center">
+    <div class="header-stat" id="hdr-season"><span class="lbl">Season</span><span class="val">—</span></div>
+    <div class="header-stat" id="hdr-city-active"><span class="lbl">City</span><span class="val">Lagos</span></div>
+    <div class="header-stat" id="hdr-time"><span class="lbl">Lagos Time</span><span class="val" id="clock">—</span></div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill" id="api-status">
+      <span class="pulse-dot"></span><span id="api-status-text">Connecting…</span>
+    </div>
+    <div class="status-pill llm" id="llm-status">
+      <span class="llm-icon">🧠</span><span id="llm-status-text">LLM —</span>
+    </div>
+    <button class="chat-toggle" id="chat-toggle" title="Chat with Nexus">💬</button>
+    <label class="toggle-wrap">
+      <input type="checkbox" id="auto-refresh" />
+      <span class="toggle"></span>
+      <span class="toggle-lbl">Auto</span>
+    </label>
+    <button class="header-btn" id="logout-btn" title="Sign out">🚪 Logout</button>
+  </div>
+</header>
+
+<!-- ── LAYOUT ── -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <p class="sidebar-label">City</p>
+      <div class="city-grid">
+        <button class="city-btn active" data-city="Lagos">🏙️<span>Lagos</span></button>
+        <button class="city-btn" data-city="Abuja">🏛️<span>Abuja</span></button>
+        <button class="city-btn" data-city="PortHarcourt">⚓<span>P/Harcourt</span></button>
+        <button class="city-btn" data-city="Kano">🏜️<span>Kano</span></button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Season Override</p>
+      <div class="season-grid">
+        <button class="season-btn active" data-season="">🗓️ Auto</button>
+        <button class="season-btn" data-season="harmattan">🌪️ Harmattan</button>
+        <button class="season-btn" data-season="rainy">🌧️ Rainy</button>
+        <button class="season-btn" data-season="dry">☀️ Dry</button>
+        <button class="season-btn" data-season="normal">🔵 Normal</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <label class="sidebar-label" for="sample-count">Samples (n)</label>
+      <input type="range" id="sample-count" min="50" max="500" value="200" step="50" />
+      <div class="range-val"><span id="sample-val">200</span> records</div>
+    </div>
+
+    <button class="run-btn" id="run-btn">
+      <span class="run-icon">▶</span> Run Pipeline
+    </button>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Diagnose Row</p>
+      <div class="row-control">
+        <input type="number" id="row-idx" value="170" min="0" max="199" />
+        <button class="diag-btn" id="diag-btn">Diagnose</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">City Profile</p>
+      <button class="outline-btn" id="city-profile-btn">View NCC Baseline</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+
+    <!-- KPI METRICS -->
+    <section class="section">
+      <h2 class="section-title">Live Metrics</h2>
+      <div class="metrics-grid">
+        <div class="metric-card" id="kpi-osnr">
+          <div class="metric-label">Avg OSNR</div>
+          <div class="metric-value mono" id="v-osnr">—</div>
+          <div class="metric-unit">dB</div>
+          <div class="metric-bar"><div class="metric-bar-fill green" id="b-osnr"></div></div>
+          <div class="metric-threshold">NCC min: 15 dB</div>
+        </div>
+        <div class="metric-card" id="kpi-ber">
+          <div class="metric-label">Avg BER</div>
+          <div class="metric-value mono" id="v-ber">—</div>
+          <div class="metric-unit">bit error rate</div>
+          <div class="metric-bar"><div class="metric-bar-fill green" id="b-ber"></div></div>
+          <div class="metric-threshold">NCC max: 1e-5</div>
+        </div>
+        <div class="metric-card" id="kpi-lat">
+          <div class="metric-label">Avg Latency</div>
+          <div class="metric-value mono" id="v-lat">—</div>
+          <div class="metric-unit">ms</div>
+          <div class="metric-bar"><div class="metric-bar-fill green" id="b-lat"></div></div>
+          <div class="metric-threshold">NCC max: 150 ms</div>
+        </div>
+        <div class="metric-card" id="kpi-anom">
+          <div class="metric-label">Anomalies</div>
+          <div class="metric-value mono" id="v-anom">—</div>
+          <div class="metric-unit">flagged records</div>
+          <div class="metric-bar"><div class="metric-bar-fill amber" id="b-anom"></div></div>
+          <div class="metric-threshold">IsolationForest flags</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARTS -->
+    <section class="section">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 class="card-title">State Distribution</h3>
+          <div class="donut-wrap"><canvas id="stateChart"></canvas></div>
+          <div class="legend" id="state-legend"></div>
+        </div>
+        <div class="chart-card wide">
+          <h3 class="card-title">OSNR Trend (last 15 rows)</h3>
+          <canvas id="osnrChart" height="90"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- NCC COMPLIANCE -->
+    <section class="section">
+      <h2 class="section-title">NCC QoS Compliance</h2>
+      <div class="compliance-grid" id="compliance-grid">
+        <div class="compliance-card">
+          <div class="comp-label">OSNR Compliance</div>
+          <div class="comp-bar-wrap"><div class="comp-bar" id="comp-osnr"></div></div>
+          <div class="comp-val" id="cv-osnr">—%</div>
+        </div>
+        <div class="compliance-card">
+          <div class="comp-label">BER Compliance</div>
+          <div class="comp-bar-wrap"><div class="comp-bar" id="comp-ber"></div></div>
+          <div class="comp-val" id="cv-ber">—%</div>
+        </div>
+        <div class="compliance-card">
+          <div class="comp-label">Latency Compliance</div>
+          <div class="comp-bar-wrap"><div class="comp-bar" id="comp-lat"></div></div>
+          <div class="comp-val" id="cv-lat">—%</div>
+        </div>
+        <div class="compliance-card">
+          <div class="comp-label">Overall Status</div>
+          <div class="comp-status" id="comp-overall">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAULT INJECTION -->
+    <section class="section">
+      <h2 class="section-title">Nigerian Fault Event Simulator</h2>
+      <div class="fault-grid">
+        <button class="fault-btn f-red"    data-event="fiber_cut">
+          <span class="f-icon">✂️</span>
+          <span class="f-name">Fibre Cut</span>
+          <span class="f-desc">Physical cable cut</span>
+        </button>
+        <button class="fault-btn f-yellow" data-event="generator_failure">
+          <span class="f-icon">⚡</span>
+          <span class="f-name">Generator Failure</span>
+          <span class="f-desc">Power infrastructure outage</span>
+        </button>
+        <button class="fault-btn f-orange" data-event="harmattan_degradation">
+          <span class="f-icon">🌪️</span>
+          <span class="f-name">Harmattan Dust</span>
+          <span class="f-desc">OSNR attenuation Nov–Feb</span>
+        </button>
+        <button class="fault-btn f-blue"   data-event="rain_attenuation">
+          <span class="f-icon">🌧️</span>
+          <span class="f-name">Rain Attenuation</span>
+          <span class="f-desc">Heavy rain power drop</span>
+        </button>
+        <button class="fault-btn f-purple" data-event="peak_congestion">
+          <span class="f-icon">📱</span>
+          <span class="f-name">Peak Congestion</span>
+          <span class="f-desc">Lagos evening usage peak</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- DIAGNOSIS PANEL -->
+    <section class="section">
+      <h2 class="section-title">Diagnosis Output</h2>
+      <div class="diag-card" id="diag-card">
+        <div class="diag-empty" id="diag-empty">Run the pipeline or inject a fault event to see diagnosis</div>
+        <div class="diag-content hidden" id="diag-content">
+          <div class="diag-header">
+            <span class="badge" id="d-state-badge">—</span>
+            <span class="badge source" id="d-source-badge">—</span>
+            <span class="badge urgency" id="d-urgency-badge">—</span>
+            <span class="badge ncc" id="d-ncc-badge">—</span>
+          </div>
+          <div class="diag-body">
+            <div class="diag-row"><span class="diag-lbl">Diagnosis</span><span class="diag-val" id="d-diagnosis"></span></div>
+            <div class="diag-row"><span class="diag-lbl">Root Cause</span><span class="diag-val" id="d-root"></span></div>
+            <div class="diag-row"><span class="diag-lbl">Recommendation</span><span class="diag-val" id="d-suggest"></span></div>
+            <div class="diag-row"><span class="diag-lbl">Confidence</span><span class="diag-val" id="d-conf"></span></div>
+          </div>
+          <details class="diag-details">
+            <summary>Full Explanation</summary>
+            <pre id="d-explanation"></pre>
+          </details>
+          <div class="diag-meta">
+            <span id="d-city-season"></span>
+            <span id="d-telemetry"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAVED LOGS -->
+    <section class="section" id="logs-section">
+      <h2 class="section-title">Saved Logs</h2>
+      <div class="logs-toolbar">
+        <button class="outline-btn small" id="logs-refresh">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table class="telem-table">
+          <thead><tr><th>ID</th><th>Time</th><th>City</th><th>Season</th><th>Samples</th><th>Actions</th></tr></thead>
+          <tbody id="logs-body"><tr><td colspan="6" class="table-empty">No saved runs</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- USER MANAGEMENT (superadmin only) -->
+    <section class="section hidden" id="user-mgmt-section">
+      <h2 class="section-title">User Management</h2>
+      <div class="logs-toolbar">
+        <button class="outline-btn small" id="users-refresh">Refresh</button>
+        <button class="outline-btn small" id="user-add-btn">+ Add User</button>
+      </div>
+      <div class="table-wrap">
+        <table class="telem-table">
+          <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="users-body"><tr><td colspan="5" class="table-empty">No users</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ADD USER MODAL -->
+    <div class="modal-overlay hidden" id="user-modal-overlay">
+      <div class="modal-card" style="max-width:420px">
+        <div class="modal-header">
+          <h3>Add User</h3>
+          <button class="modal-close" id="user-modal-close">✕</button>
+        </div>
+        <div id="user-modal-body">
+          <form id="user-add-form" style="display:flex;flex-direction:column;gap:14px">
+            <div class="form-group">
+              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Username</label>
+              <input type="text" id="user-form-username" required style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Password</label>
+              <input type="password" id="user-form-password" required style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Role</label>
+              <select id="user-form-role" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none">
+                <option value="user">User</option>
+                <option value="superadmin">Superadmin</option>
+              </select>
+            </div>
+            <button type="submit" class="run-btn" style="margin:0">Create User</button>
+            <div id="user-form-error" style="color:var(--red);font-size:13px;display:none"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TELEMETRY TABLE -->
+    <section class="section">
+      <div class="table-header">
+        <h2 class="section-title" style="margin:0">Telemetry — Last 15 Records</h2>
+        <button class="outline-btn small" id="export-btn">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table class="telem-table" id="telem-table">
+          <thead>
+            <tr>
+              <th>Time</th><th>Hr</th><th>OSNR (dB)</th><th>BER</th>
+              <th>Power (dBm)</th><th>Latency (ms)</th>
+              <th>Event</th><th>Fault Cause</th><th>State</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="telem-body">
+            <tr><td colspan="10" class="table-empty">Run pipeline to load telemetry data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CITY PROFILE MODAL -->
+    <div class="modal-overlay hidden" id="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-title">City Profile</h3>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-panel hidden" id="chat-panel">
+  <div class="chat-header">
+    <div class="chat-hdr-left">
+      <img src="/static/nexus.jpg" alt="Nexus" class="chat-hdr-avatar" />
+      <span class="chat-hdr-title">Nexus</span>
+      <span class="chat-hdr-sub">your trusted fiber assistant</span>
+    </div>
+    <div class="chat-hdr-controls">
+      <label class="chat-mode-toggle" title="Toggle technical / simple explanations">
+        <span class="chat-mode-lbl" id="chat-mode-lbl">Technical</span>
+        <input type="checkbox" id="chat-mode" checked />
+        <span class="chat-mode-slider"></span>
+      </label>
+      <button class="chat-hdr-minimize" id="chat-minimize">─</button>
+      <button class="chat-hdr-close" id="chat-close">✕</button>
+    </div>
+  </div>
+  <div class="chat-body" id="chat-body">
+    <div class="chat-msgs" id="chat-msgs">
+      <div class="chat-msg assistant">OASIS-X powered by Nexus 😉
+You can ask me about the telemetry, charts, or NCC compliance!</div>
+    </div>
+    <div class="chat-foot">
+      <input type="text" class="chat-input" id="chat-input" placeholder="Ask about the data..." />
+      <button class="chat-send" id="chat-send" title="Send">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer" id="footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/static/oasis.png" alt="OASIS-X" class="footer-logo" />
+        <div class="footer-brand-text">
+          <div class="footer-title">OASIS-X</div>
+          <div class="footer-motto">The self-preserving nervous system for dark fibre</div>
+        </div>
+      </div>
+      <div class="footer-powered">powered by Swift Solutions</div>
+    </div>
+    <div class="footer-right">
+      <span class="footer-item">
+        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        olorundamijoshua
+      </span>
+      <span class="footer-item">
+        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        (+234)8106460419
+      </span>
+      <div class="footer-addr">Mountain Top University, Km. 12, Lagos-Ibadan Expressway, Ogun State.</div>
+      <div class="footer-email">For any complaints, you can email: <a href="mailto:joshuaolorundami@mtu.edu.ng">joshuaolorundami@mtu.edu.ng</a></div>
+    </div>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script src="/static/app.js?v=6"></script>
+</body>
+</html>
