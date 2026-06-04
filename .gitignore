@@ -1,2 +1,19 @@
-# Created by venv; see https://docs.python.org/3/library/venv.html
-*
+__pycache__/
+venv/
+.venv/
+.env
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.pyc
+.DS_Store
+.vscode/
+notebooks/
+logs/
+data/*.csv
+dist/
+build/
+*.spec
+*.exe
+*.msi
