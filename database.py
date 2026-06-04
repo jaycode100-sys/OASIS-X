@@ -1,8 +1,8 @@
 import sqlite3, json, os, threading
 from datetime import datetime
 
-DB_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-DB_PATH = os.path.join(DB_DIR, "oasis.db")
+DB_DIR = os.environ.get("OASIS_DB_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
+DB_PATH = os.environ.get("OASIS_DB_PATH", os.path.join(DB_DIR, "oasis.db"))
 
 _local = threading.local()
 
@@ -20,6 +20,7 @@ def init_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS pipeline_runs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
             city TEXT NOT NULL,
             season TEXT,
@@ -36,6 +37,7 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS diagnosis_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             run_id INTEGER,
             row_index INTEGER,
             diagnosis_json TEXT,
@@ -56,7 +58,55 @@ def init_db():
             role TEXT NOT NULL DEFAULT 'user',
             created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         );
+        CREATE TABLE IF NOT EXISTS activity_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            message TEXT NOT NULL,
+            html TEXT,
+            user_id INTEGER,
+            username TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER UNIQUE NOT NULL,
+            display_name TEXT,
+            avatar_color TEXT DEFAULT '#FF9E00',
+            theme TEXT DEFAULT 'dark',
+            settings_json TEXT DEFAULT '{}',
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            subject TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            assigned_to INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE TABLE IF NOT EXISTS complaint_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     """)
+    # Add user_id column to existing tables if missing
+    try:
+        conn.execute("ALTER TABLE pipeline_runs ADD COLUMN user_id INTEGER")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE diagnosis_logs ADD COLUMN user_id INTEGER")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
 
 def save_pipeline_run(city, season, n_samples, rows, summary, ncc_compliance):
@@ -172,3 +222,153 @@ def delete_user(user_id: int) -> bool:
     cur = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     return cur.rowcount > 0
+
+
+# ── Activity Logs ─────────────────────────────────────────────────────────────────
+
+def log_activity(act_type: str, message: str, html: str = None, user_id: int = None, username: str = None, user_agent: str = None):
+    conn = _get_conn()
+    conn.execute(
+        "INSERT INTO activity_logs (type, message, html, user_id, username, user_agent) VALUES (?,?,?,?,?,?)",
+        (act_type, message, html or message, user_id, username, user_agent)
+    )
+    conn.commit()
+
+
+def get_activities(limit: int = 50, user_id: int = None, type_filter: str = None) -> list[dict]:
+    conn = _get_conn()
+    sql = "SELECT id, type, message, html, username, user_agent, created_at FROM activity_logs"
+    params = []
+    conditions = []
+    if user_id is not None:
+        conditions.append("user_id = ?")
+        params.append(user_id)
+    if type_filter:
+        conditions.append("type = ?")
+        params.append(type_filter)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── User Profiles ──────────────────────────────────────────────────────────────────
+
+def get_user_profile(user_id: int) -> dict | None:
+    conn = _get_conn()
+    r = conn.execute("SELECT * FROM user_profiles WHERE user_id=?", (user_id,)).fetchone()
+    if r:
+        res = dict(r)
+        res["settings"] = json.loads(res.pop("settings_json", "{}"))
+        return res
+    return None
+
+
+def create_user_profile(user_id: int, display_name: str = None, avatar_color: str = "#FF9E00", theme: str = "dark") -> dict:
+    conn = _get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO user_profiles (user_id, display_name, avatar_color, theme) VALUES (?,?,?,?)",
+        (user_id, display_name or "", avatar_color, theme)
+    )
+    conn.commit()
+    return get_user_profile(user_id)
+
+
+def update_user_profile(user_id: int, **kwargs) -> dict | None:
+    conn = _get_conn()
+    allowed = {"display_name", "avatar_color", "theme", "settings_json"}
+    updates = {k: v for k, v in kwargs.items() if k in allowed}
+    if not updates:
+        return get_user_profile(user_id)
+    if "settings_json" in updates:
+        updates["settings_json"] = json.dumps(updates["settings_json"])
+    sets = ", ".join(f"{k}=?" for k in updates)
+    conn.execute(f"UPDATE user_profiles SET {sets} WHERE user_id=?", (*updates.values(), user_id))
+    conn.commit()
+    return get_user_profile(user_id)
+
+
+# ── Complaints ────────────────────────────────────────────────────────────────────────
+
+def create_complaint(user_id: int, subject: str) -> dict:
+    conn = _get_conn()
+    cur = conn.execute(
+        "INSERT INTO complaints (user_id, subject) VALUES (?,?)",
+        (user_id, subject)
+    )
+    conn.commit()
+    return dict(conn.execute("SELECT * FROM complaints WHERE id=?", (cur.lastrowid,)).fetchone())
+
+
+def get_complaints(user_id: int = None, status: str = None) -> list[dict]:
+    conn = _get_conn()
+    sql = "SELECT * FROM complaints"
+    params = []
+    conditions = []
+    if user_id is not None:
+        conditions.append("user_id = ?")
+        params.append(user_id)
+    if status:
+        conditions.append("status = ?")
+        params.append(status)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY updated_at DESC"
+    rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_complaint(complaint_id: int) -> dict | None:
+    conn = _get_conn()
+    r = conn.execute("SELECT * FROM complaints WHERE id=?", (complaint_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def update_complaint_status(complaint_id: int, status: str, assigned_to: int = None) -> dict | None:
+    conn = _get_conn()
+    if assigned_to is not None:
+        conn.execute(
+            "UPDATE complaints SET status=?, assigned_to=?, updated_at=datetime('now','localtime') WHERE id=?",
+            (status, assigned_to, complaint_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE complaints SET status=?, updated_at=datetime('now','localtime') WHERE id=?",
+            (status, complaint_id)
+        )
+    conn.commit()
+    return get_complaint(complaint_id)
+
+
+def add_complaint_message(complaint_id: int, sender_id: int, message: str) -> dict:
+    conn = _get_conn()
+    cur = conn.execute(
+        "INSERT INTO complaint_messages (complaint_id, sender_id, message) VALUES (?,?,?)",
+        (complaint_id, sender_id, message)
+    )
+    conn.execute("UPDATE complaints SET updated_at=datetime('now','localtime') WHERE id=?", (complaint_id,))
+    conn.commit()
+    return dict(conn.execute("SELECT * FROM complaint_messages WHERE id=?", (cur.lastrowid,)).fetchone())
+
+
+def get_complaint_messages(complaint_id: int) -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT cm.*, u.username as sender_name FROM complaint_messages cm "
+        "JOIN users u ON u.id = cm.sender_id "
+        "WHERE cm.complaint_id=? ORDER BY cm.id",
+        (complaint_id,)
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_all_open_complaints() -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT c.*, u.username as user_name FROM complaints c "
+        "JOIN users u ON u.id = c.user_id "
+        "WHERE c.status='open' ORDER BY c.created_at DESC"
+    ).fetchall()
+    return [dict(r) for r in rows]

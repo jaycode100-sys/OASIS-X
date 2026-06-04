@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -9,9 +9,12 @@ from pydantic import BaseModel
 
 from data.database import (
     create_user,
+    create_user_profile,
     delete_user,
     get_all_users,
     get_user_by_username,
+    get_user_profile,
+    log_activity,
 )
 
 # ── Config ──────────────────────────────────────────────────────────────────────
@@ -109,19 +112,34 @@ def seed_default_users():
     ]:
         existing = get_user_by_username(username)
         if existing is None:
-            create_user(username, hash_password(password), role)
+            user = create_user(username, hash_password(password), role)
+        else:
+            user = existing
+        # Ensure profile exists for every default user
+        existing_profile = get_user_profile(user["id"])
+        if existing_profile is None:
+            create_user_profile(user["id"], username)
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest):
+def login(body: LoginRequest, request: Request = None):
     """Authenticate and return a JWT access token."""
     user = get_user_by_username(body.username)
     if not user or not verify_password(body.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_access_token({"sub": user["username"], "role": user["role"]})
+    ua = request.headers.get("user-agent", "unknown") if request else "unknown"
+    log_activity(
+        act_type="login",
+        message=f"User '{user['username']}' logged in",
+        html=f'User <strong>{user["username"]}</strong> logged in',
+        user_id=user["id"],
+        username=user["username"],
+        user_agent=ua,
+    )
     return TokenResponse(
         access_token=token,
         username=user["username"],
@@ -132,11 +150,17 @@ def login(body: LoginRequest):
 @router.get("/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     """Return the currently authenticated user (without password hash)."""
+    profile = get_user_profile(current_user["id"])
     return {
         "id": current_user["id"],
         "username": current_user["username"],
         "role": current_user["role"],
         "created_at": current_user["created_at"],
+        "profile": {
+            "display_name": profile["display_name"] if profile else current_user["username"],
+            "avatar_color": profile["avatar_color"] if profile else "#FF9E00",
+            "theme": profile["theme"] if profile else "dark",
+        } if profile else {},
     }
 
 
@@ -151,6 +175,7 @@ def register(
         raise HTTPException(status_code=400, detail="Username already exists")
 
     user = create_user(body.username, hash_password(body.password), body.role)
+    create_user_profile(user["id"], user["username"])
     return {"id": user["id"], "username": user["username"], "role": user["role"]}
 
 

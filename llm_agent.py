@@ -269,10 +269,12 @@ def get_llm_diagnosis(data: dict) -> dict:
 
 def get_llm_status() -> dict:
     """Check if Ollama and the swift-fhs model are available.
+    Always does a fresh probe (does not use cached result).
 
     Returns:
         Dict with keys: available (bool), model (str), url (str), detail (str)
     """
+    reset_availability_cache()
     ok = _check_ollama()
     return {
         "available": ok,
@@ -286,3 +288,168 @@ def reset_availability_cache():
     """Force re-check of Ollama availability on next call (useful in tests)."""
     global _ollama_available
     _ollama_available = None
+
+
+# ── 4-Line Summary Generator ─────────────────────────────────────────────────────
+
+SUMMARY_MODEL = "nexus-chat"
+SUMMARY_TIMEOUT = 180  # model cold-load may take 2+ minutes
+
+def _build_summary_prompt(data: dict) -> str:
+    """Build a prompt that asks the LLM for a 4-line structured summary."""
+    summary = data.get("summary", {})
+    diagnosis = data.get("diagnosis", {})
+    ncc = data.get("ncc", {})
+    city = summary.get("city", diagnosis.get("city", "Lagos"))
+    season = summary.get("season", diagnosis.get("season", "normal"))
+    state_dist = summary.get("state_distribution", {})
+    total = summary.get("total_records", 0)
+    normal = state_dist.get("NORMAL", 0)
+    degrading = state_dist.get("DEGRADING", 0)
+    critical = state_dist.get("CRITICAL", 0)
+    osnr_pct = ncc.get("osnr_compliance_pct", 0)
+    ber_pct = ncc.get("ber_compliance_pct", 0)
+    lat_pct = ncc.get("latency_compliance_pct", 0)
+    ncc_status = ncc.get("overall_status", "UNKNOWN")
+    dx = diagnosis.get("diagnosis", "No diagnosis yet")
+    rc = diagnosis.get("root_cause", "")
+    sug = diagnosis.get("suggestion", "")
+    urgency = diagnosis.get("urgency", "Monitor")
+
+    return (
+        f"As a Nigerian fibre network expert for OASIS-X, write exactly 4 lines "
+        f"summarising the current situation. Use this EXACT format with these "
+        f"EXACT headings:\n\n"
+        f"Line 1 — PROBLEM: <one-line description of the main issue>\n"
+        f"Line 2 — SITUATION CURRENTLY (WITH METRICS): <current state with key numbers>\n"
+        f"Line 3 — SOLUTION (IN SIMPLE WORDS): <what to do in plain language>\n"
+        f"Line 4 — <optional: a brief monitoring note if needed>\n\n"
+        f"Do NOT add extra lines, headings, or commentary.\n\n"
+        f"Context:\n"
+        f"  City: {city} | Season: {season}\n"
+        f"  Records: {total} total — {normal} normal, {degrading} degrading, {critical} critical\n"
+        f"  NCC compliance: {ncc_status} (OSNR {osnr_pct}%, BER {ber_pct}%, Latency {lat_pct}%)\n"
+        f"  Latest diagnosis: {dx}\n"
+        f"  Root cause: {rc}\n"
+        f"  Suggested action: {sug}\n"
+        f"  Urgency: {urgency}"
+    )
+
+
+def generate_4line_summary(data: dict) -> dict:
+    """Generate a 4-line structured summary of the current network situation.
+
+    Args:
+        data: dict with optional keys: summary, diagnosis, ncc (each a dict)
+
+    Returns:
+        dict with keys: lines (list[str]), raw (str), source (str)
+    """
+    lines = []
+    raw = ""
+    source = "rule"
+
+    reset_availability_cache()
+    if not _check_ollama():
+        lines = _fallback_4line_summary(data)
+        source = "rule"
+    else:
+        prompt = _build_summary_prompt(data)
+        try:
+            import requests
+            payload = {
+                "model": SUMMARY_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.25, "num_ctx": 2048},
+            }
+            resp = requests.post(
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json=payload,
+                timeout=SUMMARY_TIMEOUT,
+            )
+            if resp.status_code == 200:
+                raw = resp.json().get("response", "").strip()
+                # Try to parse as JSON first
+                try:
+                    obj = json.loads(raw)
+                    if isinstance(obj, dict):
+                        keys = ["PROBLEM", "SITUATION CURRENTLY (WITH METRICS)", "SITUATION CURRENTLY", "SITUATION", "SOLUTION (IN SIMPLE WORDS)", "SOLUTION", "NOTE", "MONITORING NOTE", "MONITOR"]
+                        for k in keys:
+                            if k in obj:
+                                v = obj[k]
+                                if isinstance(v, dict):
+                                    v = " | ".join(f"{sk}: {sv}" for sk, sv in v.items())
+                                lines.append(f"{k}: {v}")
+                        if lines:
+                            source = "llm"
+                except (json.JSONDecodeError, TypeError):
+                    pass
+                # If JSON parsing didn't work, try plain text format
+                if not lines:
+                    for line in raw.split("\n"):
+                        line = line.strip()
+                        if line and any(
+                            line.upper().startswith(h)
+                            for h in ["PROBLEM", "SITUATION", "SOLUTION", "NOTE", "MONITOR"]
+                        ):
+                            lines.append(line)
+                    if lines:
+                        source = "llm"
+        except Exception as e:
+            logger.warning(f"4-line summary LLM call failed: {e}. Using fallback.")
+
+    if not lines:
+        lines = _fallback_4line_summary(data)
+        source = "rule"
+
+    return {"lines": lines, "raw": raw, "source": source}
+
+
+def _fallback_4line_summary(data: dict) -> list:
+    """Rule-based fallback that produces the 4-line format without an LLM."""
+    summary = data.get("summary", {})
+    diagnosis = data.get("diagnosis", {})
+    ncc = data.get("ncc", {})
+    city = summary.get("city", diagnosis.get("city", "Lagos"))
+    state_dist = summary.get("state_distribution", {})
+    total = summary.get("total_records", 0)
+    normal = state_dist.get("NORMAL", 0)
+    degrading = state_dist.get("DEGRADING", 0)
+    critical = state_dist.get("CRITICAL", 0)
+    ncc_ok = ncc.get("overall_status", "") == "COMPLIANT"
+    osnr_pct = ncc.get("osnr_compliance_pct", 0)
+    dx = diagnosis.get("diagnosis", "")
+    rc = diagnosis.get("root_cause", "")
+    sug = diagnosis.get("suggestion", "")
+
+    if critical > 0:
+        problem = f"PROBLEM: {critical} critical links detected in {city} — immediate attention needed."
+    elif degrading > 0:
+        problem = f"PROBLEM: {degrading} degrading links in {city} — risk of escalation."
+    else:
+        problem = f"PROBLEM: Network in {city} is operating normally with no active faults."
+
+    situation = (
+        f"SITUATION CURRENTLY (WITH METRICS): {total} records — "
+        f"{normal} normal, {degrading} degrading, {critical} critical. "
+        f"OSNR compliance at {osnr_pct}%. NCC overall: {'COMPLIANT' if ncc_ok else 'NON-COMPLIANT'}."
+    )
+
+    if sug:
+        solution = f"SOLUTION (IN SIMPLE WORDS): {sug}"
+    elif critical > 0:
+        solution = "SOLUTION (IN SIMPLE WORDS): Reroute traffic away from critical links immediately and dispatch a repair crew to the affected fibre span."
+    elif degrading > 0:
+        solution = "SOLUTION (IN SIMPLE WORDS): Schedule maintenance during off-peak hours to clean connectors and adjust amplifier gain before thresholds are breached."
+    else:
+        solution = "SOLUTION (IN SIMPLE WORDS): No action required — continue standard monitoring and run the next diagnostic cycle."
+
+    note = ""
+    if critical > 0 or degrading > 0:
+        if "adjust" in sug.lower() or "amplifier" in sug.lower():
+            note = "NOTE: Amplifier gain adjustment of +1 to +3 dB on affected spans should restore OSNR to normal range within one maintenance window."
+        elif "reroute" in sug.lower():
+            note = "NOTE: Protection path switching should complete in under 50 ms — verify link integrity before returning to primary fibre."
+
+    return [problem, situation, solution] + ([note] if note else [])

@@ -1,0 +1,140 @@
+ENTER chat_with_llm()  mode='technical'  msg='What is the current network status?'  context_keys=None
+BUILD PROMPT: mode=technical, context_summary_city=None
+  System text portion: 1453 chars
+  User text: 'What is the current network status?...' (35 chars)
+  Built prompt: 1641 chars
+  Prompt starts: <|start_header_id|>system<|end_header_id|>
+
+You are Nexus, a helpful network assistant for OASIS-X, a Nigerian fibre fault monitoring system. Always r
+  Prompt ends: nical.<|eot_id|>
+<|start_header_id|>user<|end_header_id|>
+
+What is the current network status?<|eot_id|>
+<|start_header_id|>assistant<|end_header_id|>
+  Trying model: 'nexus-chat'
+ENTER _call_generate(model='nexus-chat')  prompt_len=1641
+  Ollama URL: localhost:11434
+  Payload keys: model=nexus-chat, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 1759 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'nexus-chat' returned None — trying next
+  Trying model: 'llama3.2:1b'
+ENTER _call_generate(model='llama3.2:1b')  prompt_len=1641
+  Ollama URL: localhost:11434
+  Payload keys: model=llama3.2:1b, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 1760 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  HTTP status: 200 OK
+  Streamed reply: 322 chars, first 120='Our network status is currently NORMAL, with all metrics within acceptable limits. The fiber cut in Lagos was resolved y'
+EXIT _call_generate -> OK (322 chars)
+  Model 'llama3.2:1b' succeeded — returning reply
+ENTER chat_with_llm()  mode='technical'  msg='Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos","season":"rainy","ncc_drift_applied":true,"state_distribution":{"DEGRADING":146,"CRITICAL":54},"action_distribution":{"ADJUST_AMPLIFIER_GAIN_AND_MONITOR":146,"IMMEDIATE_REROUTE_TO_PROTECTION_PATH":54},"event_distribution":{"NORMAL":102,"DEGRADING":45,"FIBER_CUT":35,"GENERATOR_FAILURE":18},"fault_causes":{"NONE":88,"FIBRE_AGING":45,"PHYSICAL_CUT":35,"POWER_INFRASTRUCTURE":18,"RAIN_ATTENUATION":14},"ncc_compliance":{"latency_compliance_pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}'  context_keys=['summary', 'ncc', 'diagnosis']
+BUILD PROMPT: mode=technical, context_summary_city=Lagos
+  System text portion: 1668 chars
+  User text: 'Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos"...' (633 chars)
+  Built prompt: 2454 chars
+  Prompt starts: <|start_header_id|>system<|end_header_id|>
+
+You are Nexus, a helpful network assistant for OASIS-X, a Nigerian fibre fault monitoring system. Always r
+  Prompt ends: pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}<|eot_id|>
+<|start_header_id|>assistant<|end_header_id|>
+  Trying model: 'nexus-chat'
+ENTER _call_generate(model='nexus-chat')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=nexus-chat, stream=False, options={temp:0.3, ctx:4096}
+  Payload size: 2640 bytes  (NO 'system' field)
+  Request sent, waiting for response (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'nexus-chat' returned None — trying next
+  Trying model: 'llama3.2:1b'
+ENTER _call_generate(model='llama3.2:1b')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=llama3.2:1b, stream=False, options={temp:0.3, ctx:4096}
+  Payload size: 2641 bytes  (NO 'system' field)
+  Request sent, waiting for response (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'llama3.2:1b' returned None — trying next
+  Trying model: 'swift-fhs'
+ENTER _call_generate(model='swift-fhs')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=swift-fhs, stream=False, options={temp:0.3, ctx:4096}
+  Payload size: 2639 bytes  (NO 'system' field)
+  Request sent, waiting for response (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'swift-fhs' returned None — trying next
+  All models exhausted — returning error message
+ENTER chat_with_llm()  mode='technical'  msg='Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos","season":"rainy","ncc_drift_applied":true,"state_distribution":{"DEGRADING":146,"CRITICAL":54},"action_distribution":{"ADJUST_AMPLIFIER_GAIN_AND_MONITOR":146,"IMMEDIATE_REROUTE_TO_PROTECTION_PATH":54},"event_distribution":{"NORMAL":102,"DEGRADING":45,"FIBER_CUT":35,"GENERATOR_FAILURE":18},"fault_causes":{"NONE":88,"FIBRE_AGING":45,"PHYSICAL_CUT":35,"POWER_INFRASTRUCTURE":18,"RAIN_ATTENUATION":14},"ncc_compliance":{"latency_compliance_pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}'  context_keys=['summary', 'ncc', 'diagnosis']
+  Ollama not reachable — returning offline message
+ENTER chat_with_llm()  mode='technical'  msg='Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos","season":"rainy","ncc_drift_applied":true,"state_distribution":{"DEGRADING":146,"CRITICAL":54},"action_distribution":{"ADJUST_AMPLIFIER_GAIN_AND_MONITOR":146,"IMMEDIATE_REROUTE_TO_PROTECTION_PATH":54},"event_distribution":{"NORMAL":102,"DEGRADING":45,"FIBER_CUT":35,"GENERATOR_FAILURE":18},"fault_causes":{"NONE":88,"FIBRE_AGING":45,"PHYSICAL_CUT":35,"POWER_INFRASTRUCTURE":18,"RAIN_ATTENUATION":14},"ncc_compliance":{"latency_compliance_pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}'  context_keys=['summary', 'ncc', 'diagnosis']
+  Ollama not reachable — returning offline message
+ENTER chat_with_llm()  mode='technical'  msg='Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos","season":"rainy","ncc_drift_applied":true,"state_distribution":{"DEGRADING":146,"CRITICAL":54},"action_distribution":{"ADJUST_AMPLIFIER_GAIN_AND_MONITOR":146,"IMMEDIATE_REROUTE_TO_PROTECTION_PATH":54},"event_distribution":{"NORMAL":102,"DEGRADING":45,"FIBER_CUT":35,"GENERATOR_FAILURE":18},"fault_causes":{"NONE":88,"FIBRE_AGING":45,"PHYSICAL_CUT":35,"POWER_INFRASTRUCTURE":18,"RAIN_ATTENUATION":14},"ncc_compliance":{"latency_compliance_pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}'  context_keys=['summary', 'ncc', 'diagnosis']
+BUILD PROMPT: mode=technical, context_summary_city=Lagos
+  System text portion: 1668 chars
+  User text: 'Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos"...' (633 chars)
+  Built prompt: 2454 chars
+  Prompt starts: <|start_header_id|>system<|end_header_id|>
+
+You are Nexus, a helpful network assistant for OASIS-X, a Nigerian fibre fault monitoring system. Always r
+  Prompt ends: pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}<|eot_id|>
+<|start_header_id|>assistant<|end_header_id|>
+  Trying model: 'nexus-chat'
+ENTER _call_generate(model='nexus-chat')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=nexus-chat, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2639 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'nexus-chat' returned None — trying next
+  Trying model: 'llama3.2:1b'
+ENTER _call_generate(model='llama3.2:1b')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=llama3.2:1b, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2640 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'llama3.2:1b' returned None — trying next
+  Trying model: 'swift-fhs'
+ENTER _call_generate(model='swift-fhs')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=swift-fhs, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2638 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'swift-fhs' returned None — trying next
+  All models exhausted — returning error message
+ENTER chat_with_llm()  mode='technical'  msg='Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos","season":"rainy","ncc_drift_applied":true,"state_distribution":{"DEGRADING":146,"CRITICAL":54},"action_distribution":{"ADJUST_AMPLIFIER_GAIN_AND_MONITOR":146,"IMMEDIATE_REROUTE_TO_PROTECTION_PATH":54},"event_distribution":{"NORMAL":102,"DEGRADING":45,"FIBER_CUT":35,"GENERATOR_FAILURE":18},"fault_causes":{"NONE":88,"FIBRE_AGING":45,"PHYSICAL_CUT":35,"POWER_INFRASTRUCTURE":18,"RAIN_ATTENUATION":14},"ncc_compliance":{"latency_compliance_pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}'  context_keys=['summary', 'ncc', 'diagnosis']
+BUILD PROMPT: mode=technical, context_summary_city=Lagos
+  System text portion: 1668 chars
+  User text: 'Explain the latest pipeline results in technical terms. Summary: {"total_records":200,"city":"Lagos"...' (633 chars)
+  Built prompt: 2454 chars
+  Prompt starts: <|start_header_id|>system<|end_header_id|>
+
+You are Nexus, a helpful network assistant for OASIS-X, a Nigerian fibre fault monitoring system. Always r
+  Prompt ends: pct":100,"osnr_compliance_pct":74,"ber_compliance_pct":75.5,"overall_status":"NON_COMPLIANT"}}<|eot_id|>
+<|start_header_id|>assistant<|end_header_id|>
+  Trying model: 'nexus-chat'
+ENTER _call_generate(model='nexus-chat')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=nexus-chat, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2639 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'nexus-chat' returned None — trying next
+  Trying model: 'llama3.2:1b'
+ENTER _call_generate(model='llama3.2:1b')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=llama3.2:1b, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2640 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'llama3.2:1b' returned None — trying next
+  Trying model: 'swift-fhs'
+ENTER _call_generate(model='swift-fhs')  prompt_len=2454
+  Ollama URL: localhost:11434
+  Payload keys: model=swift-fhs, stream=True, options={temp:0.3, ctx:4096}
+  Payload size: 2638 bytes  (NO 'system' field)
+  Request sent (streaming), waiting for first token (timeout=120s)...
+  EXCEPTION: timed out
+  Model 'swift-fhs' returned None — trying next
+  All models exhausted — returning error message

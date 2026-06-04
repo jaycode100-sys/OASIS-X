@@ -9,13 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="icon" type="image/png" href="/static/oasis.png" />
-  <link rel="stylesheet" href="/static/style.css?v=9" />
+  <link rel="stylesheet" href="/static/style.css?v=18" />
 </head>
 <body>
 
 <!-- ── HEADER ── -->
 <header class="header" id="header">
   <div class="header-left">
+    <button class="hamburger" id="sidebar-toggle" title="Toggle sidebar">☰</button>
     <div class="logo">
       <img src="/static/oasis.png" alt="OASIS-X" class="logo-icon" />
       <div>
@@ -37,6 +38,8 @@
       <span class="llm-icon">🧠</span><span id="llm-status-text">LLM —</span>
     </div>
     <button class="chat-toggle" id="chat-toggle" title="Chat with Nexus">💬</button>
+    <button class="chat-toggle" id="complaint-toggle" title="Complaints / Help">📞</button>
+    <button class="header-btn" id="profile-btn" title="Your Profile">👤</button>
     <label class="toggle-wrap">
       <input type="checkbox" id="auto-refresh" />
       <span class="toggle"></span>
@@ -49,8 +52,12 @@
 <!-- ── LAYOUT ── -->
 <div class="layout">
 
+  <!-- Sidebar overlay backdrop (mobile) -->
+  <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-hdr"><span class="sidebar-title">Controls</span><button class="sidebar-close" id="sidebar-close-btn">✕</button></div>
     <div class="sidebar-section">
       <p class="sidebar-label">City</p>
       <div class="city-grid">
@@ -94,7 +101,7 @@
 
     <div class="sidebar-section">
       <p class="sidebar-label">City Profile</p>
-      <button class="outline-btn" id="city-profile-btn">View NCC Baseline</button>
+      <button class="outline-btn" id="city-profile-btn">NCC BASELINE & INFO</button>
     </div>
   </aside>
 
@@ -110,6 +117,7 @@
           <div class="metric-value mono" id="v-osnr">—</div>
           <div class="metric-unit">dB</div>
           <div class="metric-bar"><div class="metric-bar-fill green" id="b-osnr"></div></div>
+          <span class="metric-bar-label" id="b-osnr-lbl">—</span>
           <div class="metric-threshold">NCC min: 15 dB</div>
         </div>
         <div class="metric-card" id="kpi-ber">
@@ -117,6 +125,7 @@
           <div class="metric-value mono" id="v-ber">—</div>
           <div class="metric-unit">bit error rate</div>
           <div class="metric-bar"><div class="metric-bar-fill green" id="b-ber"></div></div>
+          <span class="metric-bar-label" id="b-ber-lbl">—</span>
           <div class="metric-threshold">NCC max: 1e-5</div>
         </div>
         <div class="metric-card" id="kpi-lat">
@@ -124,6 +133,7 @@
           <div class="metric-value mono" id="v-lat">—</div>
           <div class="metric-unit">ms</div>
           <div class="metric-bar"><div class="metric-bar-fill green" id="b-lat"></div></div>
+          <span class="metric-bar-label" id="b-lat-lbl">—</span>
           <div class="metric-threshold">NCC max: 150 ms</div>
         </div>
         <div class="metric-card" id="kpi-anom">
@@ -131,7 +141,8 @@
           <div class="metric-value mono" id="v-anom">—</div>
           <div class="metric-unit">flagged records</div>
           <div class="metric-bar"><div class="metric-bar-fill amber" id="b-anom"></div></div>
-          <div class="metric-threshold">IsolationForest flags</div>
+          <span class="metric-bar-label" id="b-anom-lbl">—</span>
+          <div class="metric-threshold">CRITICAL + DEGRADING count</div>
         </div>
       </div>
     </section>
@@ -209,6 +220,18 @@
       </div>
     </section>
 
+    <!-- 4-LINE SUMMARY CARD -->
+    <section class="section">
+      <h2 class="section-title">Network Summary</h2>
+      <div class="summary-card hidden" id="summary-card">
+        <div class="summary-header">
+          <span class="badge" id="summary-source-badge">—</span>
+        </div>
+        <div class="summary-body" id="summary-body"></div>
+      </div>
+      <div class="summary-empty" id="summary-empty">Run the pipeline or diagnose a row to generate a network summary</div>
+    </section>
+
     <!-- DIAGNOSIS PANEL -->
     <section class="section">
       <h2 class="section-title">Diagnosis Output</h2>
@@ -241,9 +264,12 @@
 
     <!-- SAVED LOGS -->
     <section class="section" id="logs-section">
-      <h2 class="section-title">Saved Logs</h2>
-      <div class="logs-toolbar">
-        <button class="outline-btn small" id="logs-refresh">Refresh</button>
+      <div class="table-header">
+        <h2 class="section-title" style="margin:0">Saved Logs</h2>
+        <div style="display:flex;gap:8px">
+          <button class="outline-btn small" id="logs-refresh">Refresh</button>
+          <button class="outline-btn small hidden" id="logs-view-toggle">Show Less</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="telem-table">
@@ -302,8 +328,11 @@
     <!-- TELEMETRY TABLE -->
     <section class="section">
       <div class="table-header">
-        <h2 class="section-title" style="margin:0">Telemetry — Last 15 Records</h2>
-        <button class="outline-btn small" id="export-btn">Export CSV</button>
+        <h2 class="section-title" style="margin:0">Telemetry</h2>
+        <div style="display:flex;gap:8px">
+          <button class="outline-btn small" id="export-btn">Export CSV</button>
+          <button class="outline-btn small hidden" id="telem-view-toggle">Show Less</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="telem-table" id="telem-table">
@@ -321,6 +350,33 @@
       </div>
     </section>
 
+    <!-- DIGITAL TWIN -->
+    <section class="section">
+      <h2 class="section-title">Digital Twin — Network Topology</h2>
+      <canvas class="digital-twin-canvas" id="twinCanvas"></canvas>
+      <div class="twin-legend">
+        <span class="twin-legend-item"><span class="twin-dot" style="background:#00ff88"></span> Healthy</span>
+        <span class="twin-legend-item"><span class="twin-dot" style="background:#f59e0b"></span> Degrading</span>
+        <span class="twin-legend-item"><span class="twin-dot" style="background:#ef4444"></span> Critical</span>
+        <span class="twin-legend-item"><span class="twin-dot" style="background:#a855f7"></span> Active Cable Route</span>
+      </div>
+    </section>
+
+    <!-- ACTIVITY FEED -->
+    <section class="section superadmin-only">
+      <h2 class="section-title">Live Activity Feed</h2>
+      <div class="activity-feed" id="activity-feed">
+        <div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px">Loading activities…</div>
+      </div>
+    </section>
+
+    <!-- VIEW EXPLANATION BAR -->
+    <div class="explanation-bar" id="explanation-bar">
+      <span class="eb-text">Pipeline run complete — view technical explanation?</span>
+      <button class="eb-btn" id="eb-btn">View Explanation</button>
+      <button class="eb-close" id="eb-close">✕</button>
+    </div>
+
     <!-- CITY PROFILE MODAL -->
     <div class="modal-overlay hidden" id="modal-overlay">
       <div class="modal-card">
@@ -329,6 +385,52 @@
           <button class="modal-close" id="modal-close">✕</button>
         </div>
         <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- USER PROFILE MODAL -->
+    <div class="modal-overlay hidden" id="profile-modal-overlay">
+      <div class="modal-card" style="max-width:520px">
+        <div class="modal-header">
+          <h3>My Profile</h3>
+          <button class="modal-close" id="profile-modal-close">✕</button>
+        </div>
+        <div id="profile-modal-body">
+          <div class="profile-user-card">
+            <div class="profile-avatar" id="profile-avatar">👤</div>
+            <div class="profile-info">
+              <div class="profile-name" id="profile-name">—</div>
+              <div class="profile-role" id="profile-role">—</div>
+              <div class="profile-joined" id="profile-joined">—</div>
+            </div>
+          </div>
+          <div class="profile-section">
+            <div class="profile-section-title">Personalisation</div>
+            <div class="profile-row">
+              <span>Display Name</span>
+              <input type="text" id="profile-display-name" class="profile-input" />
+            </div>
+            <div class="profile-row">
+              <span>Theme</span>
+              <label class="theme-toggle">
+                <span id="theme-lbl">Dark</span>
+                <input type="checkbox" id="theme-switch" />
+                <span class="theme-slider"></span>
+              </label>
+            </div>
+            <div class="profile-row">
+              <span>Avatar Colour</span>
+              <input type="color" id="profile-avatar-color" value="#FF9E00" class="profile-color" />
+            </div>
+          </div>
+          <div class="profile-section">
+            <div class="profile-section-title">My Activity</div>
+            <div class="profile-recent-acts" id="profile-recent-acts">
+              <div style="color:var(--txt3);font-size:12px">Loading...</div>
+            </div>
+          </div>
+          <button class="profile-save-btn" id="profile-save-btn">Save Changes</button>
+        </div>
       </div>
     </div>
 
@@ -349,6 +451,7 @@
         <input type="checkbox" id="chat-mode" checked />
         <span class="chat-mode-slider"></span>
       </label>
+      <button class="chat-hdr-btn" id="chat-diag-btn" title="Run Ollama diagnostics" onclick="chat.diagnose()">🔍</button>
       <button class="chat-hdr-minimize" id="chat-minimize">─</button>
       <button class="chat-hdr-close" id="chat-close">✕</button>
     </div>
@@ -361,6 +464,36 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
     <div class="chat-foot">
       <input type="text" class="chat-input" id="chat-input" placeholder="Ask about the data..." />
       <button class="chat-send" id="chat-send" title="Send">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLAINT PANEL -->
+<div class="chat-panel hidden" id="complaint-panel" style="right:90px">
+  <div class="chat-header">
+    <div class="chat-hdr-left">
+      <span style="font-size:18px">📞</span>
+      <span class="chat-hdr-title">Complaints & Help</span>
+    </div>
+    <div class="chat-hdr-controls">
+      <button class="chat-hdr-btn" id="complaint-new-btn" title="New complaint">✏️</button>
+      <button class="chat-hdr-minimize" id="complaint-minimize">─</button>
+      <button class="chat-hdr-close" id="complaint-close">✕</button>
+    </div>
+  </div>
+  <div class="chat-body">
+    <div class="chat-msgs" id="complaint-msgs">
+      <div class="chat-msg assistant">Submit a complaint to get help from a support agent.</div>
+    </div>
+    <div class="chat-foot" style="flex-direction:column;gap:6px">
+      <div style="display:flex;gap:6px;width:100%">
+        <input type="text" class="chat-input" id="complaint-subject" placeholder="Brief subject..." style="flex:1" />
+        <button class="chat-send" id="complaint-create-btn" title="Start complaint" style="background:var(--red);white-space:nowrap;font-size:12px;padding:8px 10px">New</button>
+      </div>
+      <div style="display:flex;gap:6px;width:100%">
+        <input type="text" class="chat-input" id="complaint-input" placeholder="Type your message..." style="flex:1" disabled />
+        <button class="chat-send" id="complaint-send" title="Send" disabled>➤</button>
+      </div>
     </div>
   </div>
 </div>
@@ -396,6 +529,6 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
 <!-- TOAST -->
 <div id="toast-container"></div>
 
-<script src="/static/app.js?v=6"></script>
+  <script src="/static/app.js?v=25"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from typing import Literal, Optional
 import hashlib, json
 
@@ -13,11 +13,15 @@ from models.ncc_feed import (
     NCC_CITY_PROFILES,
 )
 from root.decision_engine import process_decisions, validate_and_execute
-from root.llm_agent import get_llm_diagnosis, get_llm_status
-from root.chat_agent import chat_with_llm
+from root.llm_agent import get_llm_diagnosis, get_llm_status, generate_4line_summary
+from root.chat_agent import chat_with_llm, diagnose_ollama
 from data.database import (
     save_pipeline_run, get_pipeline_runs, get_pipeline_run, delete_pipeline_run,
     save_diagnosis, save_chat_message, get_chat_history, clear_chat_history,
+    log_activity, get_activities,
+    get_user_profile, update_user_profile,
+    create_complaint, get_complaints, get_complaint_messages,
+    add_complaint_message, get_all_open_complaints, update_complaint_status,
 )
 
 router = APIRouter()
@@ -98,6 +102,14 @@ def run_pipeline(
         "fault_causes": df["fault_cause"].value_counts().to_dict(),
         "ncc_compliance": compliance,
     }
+
+    log_activity(
+        act_type="pipeline",
+        message=f"Pipeline run in {city}: {len(df)} records, {compliance.get('overall_status','?')}",
+        html=f"Pipeline run: <strong>{len(df)}</strong> records in <strong>{city}</strong> | Compliance: <strong>{compliance.get('overall_status','?')}</strong>",
+        user_id=_user["id"],
+        username=_user["username"],
+    )
 
     # Return last 15 rows (fault zone + context)
     cols = ["time", "hour_of_day", "osnr_db", "ber", "power_dbm", "latency_ms",
@@ -185,6 +197,14 @@ def simulate_event(
     row = df.iloc[row_index].to_dict()
     diagnosis = get_llm_diagnosis(row)
 
+    log_activity(
+        act_type="fault",
+        message=f"Fault '{event_type}' injected in {city}",
+        html=f"Fault <strong>{event_type.replace('_',' ')}</strong> injected in <strong>{city}</strong> — {diagnosis.get('diagnosis','')}",
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+
     return {
         "event_injected": event_type,
         "city": city,
@@ -223,6 +243,14 @@ def diagnose_row(
     row = df.iloc[row_index].to_dict()
     diagnosis = get_llm_diagnosis(row)
 
+    log_activity(
+        act_type="diagnose",
+        message=f"Diagnosed row {row_index} in {city}",
+        html=f"Diagnosed row <strong>#{row_index}</strong> in <strong>{city}</strong> — {diagnosis.get('diagnosis','')}",
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+
     return {
         "row_index": row_index,
         "city": city,
@@ -235,6 +263,23 @@ def diagnose_row(
         },
         **diagnosis,
     }
+
+
+# ── 4-Line Summary ───────────────────────────────────────────────────────────────
+
+@router.post("/summarize")
+def summarize_network(
+    _user: dict = Depends(get_current_user),
+    body: dict = Body(...),
+):
+    """Generate a 4-line structured summary of the current network situation
+    using an LLM.  Provide 'summary', 'diagnosis', and/or 'ncc' keys in the body.
+
+    Returns:
+        lines (list[str]), raw (str), source (str)
+    """
+    result = generate_4line_summary(body)
+    return result
 
 
 # ── Pipeline Logs (SQLite) ─────────────────────────────────────────────────────
@@ -302,6 +347,12 @@ def clear_chat(_user: dict = Depends(get_current_user)):
     return {"cleared": True}
 
 
+@router.get("/chat/diagnose")
+def chat_diagnose(_user: dict = Depends(get_current_user)):
+    """Run comprehensive Ollama diagnostics and return raw results."""
+    return diagnose_ollama()
+
+
 @router.post("/chat")
 def chat(
     _user: dict = Depends(get_current_user),
@@ -319,3 +370,116 @@ def chat(
     reply = result.get("reply", "")
     save_chat_message("assistant", reply)
     return {"reply": reply, "source": result.get("source", "unknown")}
+
+
+# ── User Profile ─────────────────────────────────────────────────────────────────────
+
+@router.get("/profile")
+def get_profile(_user: dict = Depends(get_current_user)):
+    """Get the current user's profile."""
+    profile = get_user_profile(_user["id"])
+    if not profile:
+        return {"profile": None}
+    return {"profile": profile}
+
+
+@router.put("/profile")
+def update_profile(
+    _user: dict = Depends(get_current_user),
+    body: dict = Body(...),
+):
+    """Update the current user's profile (theme, display_name, avatar_color, settings)."""
+    profile = update_user_profile(_user["id"], **body)
+    return {"profile": profile}
+
+
+# ── Complaints (per-user) ────────────────────────────────────────────────────────────
+
+@router.post("/complaints")
+def create_complaint_endpoint(
+    _user: dict = Depends(get_current_user),
+    subject: str = Body(..., embed=True),
+):
+    """Create a new complaint (for regular users to chat with agent)."""
+    c = create_complaint(_user["id"], subject)
+    return {"complaint": c}
+
+
+@router.get("/complaints")
+def list_complaints(
+    _user: dict = Depends(get_current_user),
+    status: str = Query(None),
+):
+    """List complaints. Regular users see their own; superadmin sees all."""
+    if _user["role"] == "superadmin":
+        complaints = get_complaints(user_id=None, status=status) if status else get_all_open_complaints()
+    else:
+        complaints = get_complaints(user_id=_user["id"], status=status)
+    return {"complaints": complaints}
+
+
+@router.get("/complaints/{complaint_id}/messages")
+def get_complaint_messages_endpoint(
+    complaint_id: int,
+    _user: dict = Depends(get_current_user),
+):
+    """Get messages for a complaint."""
+    msgs = get_complaint_messages(complaint_id)
+    return {"messages": msgs}
+
+
+@router.post("/complaints/{complaint_id}/messages")
+def post_complaint_message(
+    complaint_id: int,
+    _user: dict = Depends(get_current_user),
+    message: str = Body(..., embed=True),
+):
+    """Add a message to a complaint. Superadmin auto-assigned."""
+    msg = add_complaint_message(complaint_id, _user["id"], message)
+    if _user["role"] == "superadmin":
+        update_complaint_status(complaint_id, "open", assigned_to=_user["id"])
+    return {"message": msg}
+
+
+@router.post("/complaints/{complaint_id}/close")
+def close_complaint(
+    complaint_id: int,
+    _user: dict = Depends(get_current_user),
+):
+    """Close a complaint."""
+    c = update_complaint_status(complaint_id, "closed")
+    return {"complaint": c}
+
+
+# ── Activity Log ──────────────────────────────────────────────────────────────────
+
+@router.post("/activity")
+def create_activity(
+    request: Request,
+    _user: dict = Depends(get_current_user),
+    body: dict = Body(...),
+):
+    """Log an activity entry."""
+    log_activity(
+        act_type=body.get("type", "system"),
+        message=body.get("message", ""),
+        html=body.get("html"),
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+    return {"logged": True}
+
+
+@router.get("/activity")
+def list_activities(
+    _user: dict = Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=200),
+    own: bool = Query(False),
+):
+    """List recent activity log entries. Superadmin can see all; regular users
+    can see their own activities by passing `own=true`."""
+    if own:
+        return {"activities": get_activities(limit, user_id=_user["id"])}
+    if _user["role"] != "superadmin":
+        raise HTTPException(status_code=403, detail="Only superadmin can view all activity logs")
+    return {"activities": get_activities(limit)}

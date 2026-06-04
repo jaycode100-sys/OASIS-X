@@ -9,18 +9,28 @@ async function authFetch(url, opts={}, ms=60000) {
     opts.headers = { ...opts.headers, 'Authorization': `Bearer ${token}` };
   }
   const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
+  const id = setTimeout(() => {
+    console.warn('[AUTHFETCH] Timeout after', ms/1000 + 's for', url);
+    ctrl.abort();
+  }, ms);
   try {
     const r = await fetch(url, { ...opts, signal: ctrl.signal });
     clearTimeout(id);
     if (r.status === 401) {
+      console.warn('[AUTHFETCH] 401 — session expired, redirecting');
       setToken(null);
       window.location.href = '/login';
       throw new Error('Session expired');
     }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
-  } catch(e) { clearTimeout(id); throw e; }
+  } catch(e) {
+    clearTimeout(id);
+    if (e.name === 'AbortError') {
+      console.error('[AUTHFETCH] ABORTED by AbortController — server took >', ms/1000 + 's');
+    }
+    throw e;
+  }
 }
 
 /* ── State ─────────────────────────────────────────────────────── */
@@ -33,7 +43,11 @@ const S = {
   autoRefreshTimer: null,
   stateChart: null,
   osnrChart: null,
-  user: null, // { id, username, role }
+  user: null,
+  telemFull: [],
+  logsFull: [],
+  telemShowAll: false,
+  logsShowAll: false,
 };
 
 /* ── API Client ────────────────────────────────────────────────── */
@@ -49,6 +63,7 @@ const api = {
   register:  (u,p,r)     => authFetch('/api/auth/register', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,role:r})}, 10000),
   listUsers: ()          => authFetch('/api/auth/users', {}, 10000),
   deleteUser:(id)        => authFetch(`/api/auth/users/${id}`, {method:'DELETE'}, 10000),
+  summarize: (data)      => authFetch('/api/summarize', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}, 30000),
 };
 
 /* ── Fetch with timeout (public calls) ────────────────────────── */
@@ -107,6 +122,9 @@ async function checkAuth() {
     if (S.user.role === 'superadmin') {
       document.getElementById('user-mgmt-section').classList.remove('hidden');
     }
+    // Apply saved theme from profile
+    const theme = S.user.profile?.theme || localStorage.getItem('oasis-theme') || 'dark';
+    applyTheme(theme);
     afterAuth();
   } catch {
     setToken(null);
@@ -206,12 +224,18 @@ function updateMetrics(rows) {
   setText('v-lat',  fmt.lat(latAvg));
   setText('v-anom', anomCount);
 
-  setBar('b-osnr', Math.min(100, Math.max(0, (osnrAvg-10)/15*100)), osnrAvg>=19?'green':osnrAvg>=15?'amber':'red');
+  const osnrPct = Math.min(100, Math.max(0, (osnrAvg-10)/15*100));
+  setBar('b-osnr', osnrPct, osnrAvg>=19?'green':osnrAvg>=15?'amber':'red');
+  setText('b-osnr-lbl', fmt.osnr(osnrAvg) + ' dB');
   const berPct = berAvg<=1e-7?100:berAvg<=1e-5?60:20;
   setBar('b-ber',  berPct, berPct>70?'green':berPct>40?'amber':'red');
-  setBar('b-lat',  Math.min(100,latAvg/150*100), latAvg<=25?'green':latAvg<=100?'amber':'red');
+  setText('b-ber-lbl', fmt.ber(berAvg));
+  const latPct = Math.min(100,latAvg/150*100);
+  setBar('b-lat',  latPct, latAvg<=25?'green':latAvg<=100?'amber':'red');
+  setText('b-lat-lbl', fmt.lat(latAvg) + ' ms');
   const ap = (1-anomCount/rows.length)*100;
   setBar('b-anom', ap, ap>80?'green':ap>60?'amber':'red');
+  setText('b-anom-lbl', anomCount + '/' + rows.length);
 }
 
 /* ── Update state donut ────────────────────────────────────────── */
@@ -299,12 +323,36 @@ function updateDiagnosis(d, city, season) {
   setTimeout(()=>card.classList.remove('flash'), 700);
 }
 
+/* ── 4-Line Summary ───────────────────────────────────────────── */
+function updateSummary(r) {
+  const card = document.getElementById('summary-card');
+  const body = document.getElementById('summary-body');
+  const empty = document.getElementById('summary-empty');
+  const badge = document.getElementById('summary-source-badge');
+  if (!r.lines || !r.lines.length) {
+    card.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  empty.classList.add('hidden');
+  badge.textContent = (r.source||'').toUpperCase();
+  badge.className = 'badge ' + (r.source||'rule');
+  body.innerHTML = r.lines.map((line, i) => {
+    const cls = i === 0 ? 'problem' : i === r.lines.length-1 ? 'solution' : '';
+    return `<div class="summary-line ${cls}">${line}</div>`;
+  }).join('');
+  card.classList.add('flash');
+  setTimeout(()=>card.classList.remove('flash'), 700);
+}
+
 /* ── Update telemetry table ────────────────────────────────────── */
-function updateTable(rows) {
+function renderTelemRows(rows) {
   const body = document.getElementById('telem-body');
   if(!rows||!rows.length){ body.innerHTML='<tr><td colspan="10" class="table-empty">No data</td></tr>'; return; }
   S.lastRows = rows;
-  body.innerHTML = rows.map(r=>`
+  const show = S.telemShowAll ? rows : rows.slice(0, 5);
+  body.innerHTML = show.map(r=>`
     <tr class="${r.state||''}">
       <td>${r.time??'—'}</td>
       <td>${r.hour_of_day??'—'}</td>
@@ -317,6 +365,24 @@ function updateTable(rows) {
       <td><span class="state-tag ${r.state||''}">${r.state||'—'}</span></td>
       <td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.recommended_action||''}">${(r.recommended_action||'—').replace(/_/g,' ')}</td>
     </tr>`).join('');
+  const toggle = document.getElementById('telem-view-toggle');
+  if(rows.length > 5) {
+    toggle.classList.remove('hidden');
+    toggle.textContent = S.telemShowAll ? 'Show Less' : `View ${rows.length - 5} More`;
+  } else {
+    toggle.classList.add('hidden');
+  }
+}
+
+function toggleTelemView() {
+  S.telemShowAll = !S.telemShowAll;
+  renderTelemRows(S.telemFull);
+}
+
+function updateTable(rows) {
+  S.telemFull = rows || [];
+  S.telemShowAll = false;
+  renderTelemRows(S.telemFull);
 }
 
 /* ── Run Pipeline ──────────────────────────────────────────────── */
@@ -331,9 +397,11 @@ async function runPipeline() {
     updateOsnrChart(d.rows||[]);
     updateCompliance(sum.ncc_compliance);
     updateTable(d.rows||[]);
+    drawTwin(d.rows||[]);
 
     window._lastSummary = sum;
     window._lastNcc = sum.ncc_compliance;
+    window._lastRows = d.rows||[];
 
     authFetch('/api/logs', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -343,6 +411,20 @@ async function runPipeline() {
     if(d.rows&&d.rows.length){
       document.getElementById('hdr-city-active').querySelector('.val').textContent = S.city;
     }
+
+    logActivity('pipeline', `Pipeline run: <strong>${sum.total_records||0}</strong> records in <strong>${S.city}</strong> | Compliant: <strong>${sum.ncc_compliance?.overall_status||'?'}</strong>`);
+    loadActivities();
+
+    // Generate 4-line summary
+    api.summarize({summary: sum, ncc: sum.ncc_compliance, diagnosis: window._lastDiagnosis||{}})
+      .then(r => updateSummary(r))
+      .catch(() => {});
+
+    // Show explanation bar
+    const eb = document.getElementById('explanation-bar');
+    eb.classList.add('show');
+    setTimeout(() => eb.classList.remove('show'), 15000);
+
     toast(`Pipeline complete — ${sum.total_records||0} records | ${S.city}`, 'ok');
   } catch(e) {
     toast('Pipeline error: '+e.message, 'err');
@@ -355,13 +437,21 @@ async function runPipeline() {
 /* ── Diagnose row ──────────────────────────────────────────────── */
 async function diagnoseRow() {
   const idx = parseInt(document.getElementById('row-idx').value)||0;
-  document.getElementById('diag-btn').textContent = '…';
+    document.getElementById('diag-btn').textContent = '…';
   try {
     const d = await api.diagnose(idx, S.city, S.season);
     updateDiagnosis(d, S.city, S.season);
     updateLLMBadge(d.source);
     window._lastDiagnosis = d;
+    logActivity('diagnose', `Diagnosed row <strong>#${idx}</strong> in <strong>${S.city}</strong> — ${d.diagnosis||''}`);
     toast(`Diagnosis for row ${idx}`, 'inf');
+    document.getElementById('diag-card').scrollIntoView({behavior:'smooth',block:'center'});
+
+    // Generate 4-line summary
+    const sum = window._lastSummary||{};
+    api.summarize({diagnosis: d, summary: sum, ncc: sum.ncc_compliance||{}})
+      .then(r => updateSummary(r))
+      .catch(() => {});
   } catch(e) {
     toast('Diagnose error: '+e.message, 'err');
   } finally {
@@ -369,9 +459,9 @@ async function diagnoseRow() {
   }
 }
 
-/* ── Fault event injection ─────────────────────────────────────── */
+/* ── Fault event injection with feedback ────────────────────────── */
 async function injectEvent(evType, btn) {
-  btn.classList.add('loading');
+  btn.classList.add('loading', 'active');
   const orig = btn.innerHTML;
   btn.querySelector('.f-name').textContent = 'Loading…';
   try {
@@ -381,15 +471,24 @@ async function injectEvent(evType, btn) {
     updateLLMBadge(d.source);
     window._lastDiagnosis = d;
     toast(`Event injected: ${evType.replace(/_/g,' ')}`, 'ok');
+    document.getElementById('diag-card').scrollIntoView({behavior:'smooth',block:'center'});
+    logActivity('fault', `Fault injected: <strong>${evType.replace(/_/g,' ')}</strong> in ${S.city} — ${d.diagnosis||''}`);
+
+    // Generate 4-line summary for fault event
+    const sum = window._lastSummary||{};
+    api.summarize({diagnosis: d, summary: sum, ncc: sum.ncc_compliance||{}})
+      .then(r => updateSummary(r))
+      .catch(() => {});
   } catch(e) {
     toast('Event error: '+e.message, 'err');
   } finally {
     btn.classList.remove('loading');
     btn.innerHTML = orig;
+    setTimeout(() => btn.classList.remove('active'), 2000);
   }
 }
 
-/* ── City profile modal ────────────────────────────────────────── */
+/* ── City profile modal with glossary ──────────────────────────── */
 async function showCityProfile() {
   try {
     const d = await api.context(S.city);
@@ -406,7 +505,22 @@ async function showCityProfile() {
         <div class="profile-item"><div class="p-lbl">Peak Hours</div><div class="p-val" style="font-size:14px">${(r.peak_hours||[]).join(', ')}:00</div></div>
         <div class="profile-item"><div class="p-lbl">Gen. Failure Risk</div><div class="p-val" style="font-size:14px">${((r.generator_failure_risk||0)*100).toFixed(0)}%/day</div></div>
       </div>
-      <p style="font-size:11px;color:var(--txt3);margin-top:8px">Season detected: ${d.current_season||'—'}</p>`;
+      <p style="font-size:11px;color:var(--txt3);margin-top:8px">Season detected: ${d.current_season||'—'}</p>
+      <details style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+        <summary style="cursor:pointer;font-weight:600;color:var(--accent);font-size:13px">NCC Terminology & Knowhow</summary>
+        <div style="margin-top:10px;font-size:12px;color:var(--txt2);line-height:1.7">
+          <p><strong style="color:var(--txt)">NCC</strong> — Nigerian Communications Commission, the federal regulator for QoS in telecoms.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">OSNR (Optical Signal-to-Noise Ratio)</strong> — Measures signal clarity in dB. Higher is better. NCC minimums: 15 dB for Lagos/Abuja, 14 dB for P/Harcourt & Kano. Below threshold = degradation risk.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">BER (Bit Error Rate)</strong> — Ratio of corrupted bits to total transmitted. Lower is better. NCC max: 1×10⁻⁵ (Lagos/Abuja), 1.5×10⁻⁵ (P/Harcourt & Kano).</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Latency</strong> — Round-trip delay in milliseconds. NCC max: 150 ms. Higher latency affects real-time services.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Power (dBm)</strong> — Optical power level. Normal range: -20 to +3 dBm. Dropping below -20 dBm indicates attenuation or cut.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Network States</strong> — <span style="color:#00ff88">NORMAL</span> (within NCC bounds), <span style="color:#f59e0b">DEGRADING</span> (approaching thresholds), <span style="color:#ef4444">CRITICAL</span> (threshold breached).</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Baseline Drill</strong> — Seasonal NCC drift is simulated based on harmattan (Nov–Feb), rainy (Mar–Jun), dry (Jul–Sep), and normal (Oct) seasons. Each season shifts OSNR/BER baselines to reflect real Nigerian environmental conditions.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Anomalies</strong> — Rows flagged by IsolationForest as statistically deviant. Flagged rows are classified as DEGRADING or CRITICAL depending on severity.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Fault Simulation</strong> — Each fault type (fibre cut, generator fail, harmattan dust, rain attenuation, peak congestion) degrades specific telemetry metrics to model real Nigerian fibre faults.</p>
+          <p style="margin-top:8px"><strong style="color:var(--txt)">Digital Twin</strong> — Real-time topology view of the 4-city network showing link health states between Lagos, Abuja, Port Harcourt, and Kano.</p>
+        </div>
+      </details>`;
     document.getElementById('modal-overlay').classList.remove('hidden');
   } catch(e) {
     toast('Could not load city profile', 'err');
@@ -440,6 +554,118 @@ function exportCSV() {
   toast('CSV exported','ok');
 }
 
+/* ── Activity Log ─────────────────────────────────────────────── */
+function logActivity(type, html) {
+  authFetch('/api/activity', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ type, message: html.replace(/<[^>]+>/g, ''), html })
+  }).catch(() => {});
+  // Only add to visible feed for superadmin
+  if (S.user?.role !== 'superadmin') return;
+  const feed = document.getElementById('activity-feed');
+  const item = document.createElement('div');
+  item.className = 'activity-item';
+  const icons = { pipeline:'▶', fault:'⚠️', diagnose:'🔍', login:'🔑', system:'⚙️' };
+  item.innerHTML = `<span class="activity-icon">${icons[type]||'📋'}</span>
+    <div class="activity-body">${html}</div>
+    <span class="activity-time">just now</span>`;
+  feed.insertBefore(item, feed.firstChild);
+  while(feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+/* ── Digital Twin ─────────────────────────────────────────────── */
+function drawTwin(rows) {
+  const canvas = document.getElementById('twinCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = 320;
+
+  const w = canvas.width, h = canvas.height;
+  const cities = {
+    Lagos:        { x: w*0.18, y: h*0.78 },
+    Abuja:        { x: w*0.48, y: h*0.32 },
+    PortHarcourt: { x: w*0.32, y: h*0.88 },
+    Kano:         { x: w*0.68, y: h*0.18 },
+  };
+
+  // Determine states per city from last rows
+  const stateColors = { NORMAL: '#00ff88', DEGRADING: '#f59e0b', CRITICAL: '#ef4444' };
+  const cityStates = {};
+  for (const city of Object.keys(cities)) {
+    const cityRows = (rows||[]).filter(r => (r.city||S.city) === city);
+    const lastState = cityRows.length ? cityRows[cityRows.length-1].state : 'NORMAL';
+    cityStates[city] = lastState;
+  }
+  // If no city-specific data, use S.city for all
+  if (!Object.values(cityStates).some(s => s)) {
+    for (const city of Object.keys(cities)) cityStates[city] = 'NORMAL';
+  }
+
+  // Clear
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#0B0F19';
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw links
+  const links = [
+    ['Lagos','Abuja'], ['Abuja','Kano'], ['Lagos','PortHarcourt'],
+    ['Abuja','PortHarcourt'], ['Kano','PortHarcourt']
+  ];
+  for (const [a, b] of links) {
+    const p1 = cities[a], p2 = cities[b];
+    const stA = cityStates[a]||'NORMAL', stB = cityStates[b]||'NORMAL';
+    const worst = stA === 'CRITICAL' || stB === 'CRITICAL' ? 'CRITICAL' :
+                  stA === 'DEGRADING' || stB === 'DEGRADING' ? 'DEGRADING' : 'NORMAL';
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = stateColors[worst] || '#3d5a7a';
+    ctx.lineWidth = worst === 'CRITICAL' ? 3 : 2;
+    ctx.globalAlpha = worst === 'NORMAL' ? 0.3 : 0.7;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Midpoint label
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    ctx.fillStyle = worst === 'NORMAL' ? '#3d5a7a' : stateColors[worst];
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(worst, mx, my - 6);
+  }
+
+  // Draw city nodes
+  for (const [name, pos] of Object.entries(cities)) {
+    const st = cityStates[name]||'NORMAL';
+    const col = stateColors[st] || '#3d5a7a';
+
+    // Glow
+    const grad = ctx.createRadialGradient(pos.x, pos.y, 2, pos.x, pos.y, 22);
+    grad.addColorStop(0, col + '60');
+    grad.addColorStop(1, col + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, 22, 0, Math.PI*2); ctx.fill();
+
+    // Node circle
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, 8, 0, Math.PI*2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.strokeStyle = '#0B0F19';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#e0f0ff';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, pos.x, pos.y + 22);
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = '#8899b3';
+    ctx.fillText(st, pos.x, pos.y + 34);
+  }
+}
+
 /* ── Auto-refresh ──────────────────────────────────────────────── */
 function setupAutoRefresh(on) {
   clearInterval(S.autoRefreshTimer);
@@ -450,6 +676,8 @@ function setupAutoRefresh(on) {
 const chat = {
   async send(msg) {
     const mode = document.getElementById('chat-mode').checked ? 'technical' : 'simple';
+    console.log('[CHAT] Sending message:', msg, 'mode:', mode);
+    const start = Date.now();
     const r = await authFetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -458,10 +686,12 @@ const chat = {
         ncc: window._lastNcc || null,
         diagnosis: window._lastDiagnosis || null,
       }})
-    });
+    }, 300000);  // 5 min timeout — model cold load can take 2-3 min
+    console.log('[CHAT] Response received in', (Date.now()-start)/1000 + 's', r);
     return r;
   },
   addMsg(role, text) {
+    console.log('[CHAT] addMsg role=' + role + ' len=' + (text||'').length + ' first50=' + (text||'').substring(0,50).replace(/\n/g, '\\n'));
     const box = document.getElementById('chat-msgs');
     const d = document.createElement('div');
     d.className = 'chat-msg ' + role;
@@ -469,6 +699,43 @@ const chat = {
     box.appendChild(d);
     box.scrollTop = box.scrollHeight;
   },
+  async diagnose() {
+    const btn = document.getElementById('chat-diag-btn');
+    btn.textContent = '…';
+    btn.disabled = true;
+    const loadingId = 'diag-loading-' + Date.now();
+    const loadingEl = document.createElement('div');
+    loadingEl.id = loadingId;
+    loadingEl.className = 'chat-msg loading';
+    loadingEl.innerHTML = 'Running Ollama diagnostics<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+    document.getElementById('chat-msgs').appendChild(loadingEl);
+    const r = await authFetch('/api/chat/diagnose');
+    const el = document.getElementById(loadingId);
+    if(el) el.remove();
+    let text = '=== OLLAMA DIAGNOSTIC ===\n';
+    text += `Ollama reachable : ${r.reachable}\n`;
+    text += `CLI version      : ${r.cli_version || 'N/A'}\n`;
+    text += `Available models : ${(r.models||[]).join(', ') || 'none'}\n`;
+    if(r.errors && r.errors.length) {
+      text += `\n--- ERRORS (${r.errors.length}) ---\n`;
+      r.errors.forEach(e => text += `  • ${e}\n`);
+    }
+    text += `\n--- MODEL TESTS ---\n`;
+    for(const [k, v] of Object.entries(r.tests || {})) {
+      const ok = v.passed ? '✓' : '✗';
+      text += `${ok} ${k}: `;
+      if(v.passed) text += `${v.response || 'OK'}\n`;
+      else if(v.status) text += `HTTP ${v.status} — ${(v.body_preview||'').slice(0,100)}\n`;
+      else text += `${v.error || '?'}\n`;
+    }
+    if(r.fix_commands && r.fix_commands.length) {
+      text += `\n--- FIX ---\n`;
+      r.fix_commands.forEach(c => text += `${c}\n`);
+    }
+    chat.addMsg('system', text);
+    btn.textContent = '🔍';
+    btn.disabled = false;
+  }
 };
 
 function toggleChat() {
@@ -501,14 +768,24 @@ async function doChat() {
   const msg = inp.value.trim();
   if(!msg) return;
   inp.value = '';
+  console.log('[CHAT] doChat — sending:', msg);
   chat.addMsg('user', msg);
   chat.addMsg('assistant', '…');
   try {
+    const start = Date.now();
     const r = await chat.send(msg);
+    const elapsed = (Date.now() - start) / 1000;
+    console.log('[CHAT] doChat — response in', elapsed + 's, source:', r.source, 'reply len:', r.reply?.length);
     const msgs = document.getElementById('chat-msgs');
     msgs.removeChild(msgs.lastChild);
-    chat.addMsg('assistant', r.reply || 'No response');
+    if (!r.reply) {
+      console.warn('[CHAT] Empty reply received');
+      chat.addMsg('assistant', 'No response from Nexus AI');
+    } else {
+      chat.addMsg('assistant', r.reply);
+    }
   } catch(e) {
+    console.error('[CHAT] doChat — FAILED:', e.name, e.message);
     const msgs = document.getElementById('chat-msgs');
     msgs.removeChild(msgs.lastChild);
     chat.addMsg('assistant', 'Error: ' + e.message);
@@ -516,25 +793,43 @@ async function doChat() {
 }
 
 /* ── Saved Logs ───────────────────────────────────────────────── */
+function renderLogRows(runs) {
+  const body = document.getElementById('logs-body');
+  if(!runs||!runs.length) {
+    body.innerHTML = '<tr><td colspan="6" class="table-empty">No saved runs</td></tr>';
+    return;
+  }
+  const show = S.logsShowAll ? runs : runs.slice(0, 5);
+  body.innerHTML = show.map(run => `
+    <tr>
+      <td>#${run.id}</td>
+      <td>${run.created_at||'—'}</td>
+      <td>${run.city||'—'}</td>
+      <td>${run.season||'—'}</td>
+      <td>${run.n_samples||'—'}</td>
+      <td><button class="outline-btn small" onclick="deleteLog(${run.id})">Delete</button></td>
+    </tr>
+  `).join('');
+  const toggle = document.getElementById('logs-view-toggle');
+  if(runs.length > 5) {
+    toggle.classList.remove('hidden');
+    toggle.textContent = S.logsShowAll ? 'Show Less' : `View ${runs.length - 5} More`;
+  } else {
+    toggle.classList.add('hidden');
+  }
+}
+
+function toggleLogsView() {
+  S.logsShowAll = !S.logsShowAll;
+  renderLogRows(S.logsFull);
+}
+
 async function loadLogs() {
   try {
-    const r = await authFetch('/api/logs');
-    const data = await r;
-    const body = document.getElementById('logs-body');
-    if(!data.runs || !data.runs.length) {
-      body.innerHTML = '<tr><td colspan="6" class="table-empty">No saved runs</td></tr>';
-      return;
-    }
-    body.innerHTML = data.runs.map(run => `
-      <tr>
-        <td>#${run.id}</td>
-        <td>${run.created_at||'—'}</td>
-        <td>${run.city||'—'}</td>
-        <td>${run.season||'—'}</td>
-        <td>${run.n_samples||'—'}</td>
-        <td><button class="outline-btn small" onclick="deleteLog(${run.id})">Delete</button></td>
-      </tr>
-    `).join('');
+    const data = await authFetch('/api/logs');
+    S.logsFull = data.runs || [];
+    S.logsShowAll = false;
+    renderLogRows(S.logsFull);
   } catch(e) {
     console.error('Failed to load logs:', e);
   }
@@ -585,6 +880,14 @@ async function deleteUser(id, username) {
   } catch(e) {
     toast('Failed to delete user', 'err');
   }
+}
+
+/* ── Sidebar toggle (mobile) ─────────────────── */
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebar-overlay');
+  s.classList.toggle('open');
+  o.classList.toggle('hidden');
 }
 
 /* ── Logout ─────────────────────────────────────────────────────── */
@@ -641,8 +944,62 @@ function afterAuth() {
   // Export
   document.getElementById('export-btn').addEventListener('click', exportCSV);
 
+  // Explanation bar
+  document.getElementById('eb-btn').addEventListener('click', async () => {
+    document.getElementById('explanation-bar').classList.remove('show');
+    const d = window._lastDiagnosis || window._lastSummary;
+    if (!d) return;
+    const msgs = document.getElementById('chat-msgs');
+    console.log('[EXPLAIN] View Explanation clicked, hasEngaged=' + (msgs.querySelector('.chat-msg.user') !== null));
+    const hasEngaged = msgs.querySelector('.chat-msg.user') !== null;
+    const mode = document.getElementById('chat-mode').checked ? 'technical' : 'simple';
+
+    // Show explanation bar loading
+    const loadingId = 'exp-loading-' + Date.now();
+    const loadingEl = document.createElement('div');
+    loadingEl.id = loadingId;
+    loadingEl.className = 'chat-msg loading';
+    loadingEl.innerHTML = 'Generating explanation<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+    msgs.appendChild(loadingEl);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    const cp = document.getElementById('chat-panel');
+    cp.classList.remove('hidden', 'minimized');
+
+    try {
+      const start = Date.now();
+      const r = await chat.send(
+        `Explain the latest pipeline results in ${mode} terms. ` +
+        `Summary: ${JSON.stringify(window._lastSummary)}`
+      );
+      console.log('[EXPLAIN] Response in', (Date.now()-start)/1000 + 's');
+      const el = document.getElementById(loadingId);
+      if (el) el.remove();
+      const reply = r.reply || 'No explanation available.';
+
+      if (hasEngaged) {
+        chat.addMsg('system', '──────── DIAGNOSIS EXPLANATION ────────');
+      }
+      chat.addMsg('assistant', reply);
+      chat.addMsg('assistant', 'You can continue the conversation — ask me any questions about the telemetry, charts, or NCC compliance.');
+    } catch (e) {
+      console.error('[EXPLAIN] Failed:', e.name, e.message);
+      const el = document.getElementById(loadingId);
+      if (el) el.remove();
+      chat.addMsg('assistant', 'Failed to generate explanation: ' + e.message);
+    }
+  });
+  document.getElementById('eb-close').addEventListener('click', () => {
+    document.getElementById('explanation-bar').classList.remove('show');
+  });
+
   // Auto-refresh toggle
   document.getElementById('auto-refresh').addEventListener('change', e => setupAutoRefresh(e.target.checked));
+
+  // Sidebar toggle (mobile)
+  document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebar-overlay').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebar-close-btn').addEventListener('click', toggleSidebar);
 
   // Chat toggle, minimize & send
   document.getElementById('chat-toggle').addEventListener('click', toggleChat);
@@ -651,6 +1008,12 @@ function afterAuth() {
   document.getElementById('chat-send').addEventListener('click', doChat);
   document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') doChat(); });
   document.getElementById('chat-mode').addEventListener('change', chatModeChanged);
+
+  // Telemetry view toggle
+  document.getElementById('telem-view-toggle').addEventListener('click', toggleTelemView);
+
+  // Logs view toggle
+  document.getElementById('logs-view-toggle').addEventListener('click', toggleLogsView);
 
   // Logs refresh
   document.getElementById('logs-refresh').addEventListener('click', loadLogs);
@@ -696,6 +1059,274 @@ function afterAuth() {
   // Run on load
   runPipeline();
   loadLogs();
+  loadActivities();
+  // Initial digital twin
+  setTimeout(() => drawTwin([]), 300);
+  // Poll activities every 15s (superadmin only)
+  if (S.user?.role === 'superadmin') {
+    loadActivities();
+    setInterval(loadActivities, 15000);
+  }
+  // Re-draw twin on window resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => drawTwin(window._lastRows || []), 300);
+  });
+
+  // ── Profile Modal ──
+  document.getElementById('profile-btn').addEventListener('click', openProfileModal);
+  document.getElementById('profile-modal-close').addEventListener('click', () => {
+    document.getElementById('profile-modal-overlay').classList.add('hidden');
+  });
+  document.getElementById('profile-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('profile-save-btn').addEventListener('click', saveProfile);
+  document.getElementById('theme-switch').addEventListener('change', e => {
+    const theme = e.target.checked ? 'light' : 'dark';
+    applyTheme(theme);
+  });
+
+  // ── Complaint Panel ──
+  document.getElementById('complaint-toggle').addEventListener('click', toggleComplaintPanel);
+  document.getElementById('complaint-close').addEventListener('click', toggleComplaintPanel);
+  document.getElementById('complaint-minimize').addEventListener('click', () => {
+    document.getElementById('complaint-panel').classList.toggle('minimized');
+  });
+  document.getElementById('complaint-create-btn').addEventListener('click', createComplaint);
+  document.getElementById('complaint-send').addEventListener('click', sendComplaintMessage);
+  document.getElementById('complaint-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendComplaintMessage();
+  });
+  document.getElementById('complaint-new-btn').addEventListener('click', () => {
+    document.getElementById('complaint-subject').focus();
+  });
+  loadComplaints();
+}
+
+// ── Profile Modal ──────────────────────────────────────────────────
+
+async function openProfileModal() {
+  console.log('[PROFILE] Opening profile modal');
+  const overlay = document.getElementById('profile-modal-overlay');
+  overlay.classList.remove('hidden');
+  const me = S.user || {};
+  document.getElementById('profile-name').textContent = me.username || '—';
+  document.getElementById('profile-role').textContent = me.role || '—';
+  document.getElementById('profile-joined').textContent = me.created_at || '—';
+
+  const avatarEl = document.getElementById('profile-avatar');
+  avatarEl.textContent = getInitials(me.username);
+  avatarEl.style.background = me.profile?.avatar_color || '#FF9E00';
+
+  document.getElementById('profile-display-name').value = me.profile?.display_name || me.username || '';
+  document.getElementById('theme-switch').checked = (me.profile?.theme || 'dark') === 'light';
+  document.getElementById('theme-lbl').textContent = me.profile?.theme === 'light' ? 'Light' : 'Dark';
+  document.getElementById('profile-avatar-color').value = me.profile?.avatar_color || '#FF9E00';
+
+  // Load user's activity
+  try {
+    const acts = await authFetch('/api/activity?own=true&limit=10');
+    const container = document.getElementById('profile-recent-acts');
+    if (acts.activities?.length) {
+      container.innerHTML = acts.activities.slice(0, 5).map(a =>
+        `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+          <span>${a.message || ''}</span>
+          <span style="color:var(--txt3);font-size:10px">${a.created_at || ''}</span>
+        </div>`
+      ).join('');
+    } else {
+      container.innerHTML = '<div style="color:var(--txt3);font-size:12px">No recent activity</div>';
+    }
+  } catch(e) {
+    document.getElementById('profile-recent-acts').innerHTML = '<div style="color:var(--txt3);font-size:12px">Could not load activity</div>';
+  }
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('profile-save-btn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+  try {
+    const displayName = document.getElementById('profile-display-name').value.trim();
+    const theme = document.getElementById('theme-switch').checked ? 'light' : 'dark';
+    const avatarColor = document.getElementById('profile-avatar-color').value;
+    await authFetch('/api/profile', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({display_name: displayName, theme, avatar_color: avatarColor})
+    });
+    S.user.profile = { ...(S.user.profile || {}), display_name: displayName, theme, avatar_color: avatarColor };
+    applyTheme(theme);
+    toast('Profile saved!', 'ok');
+  } catch(e) {
+    toast('Failed to save profile: ' + e.message, 'err');
+  } finally {
+    btn.textContent = 'Save Changes';
+    btn.disabled = false;
+  }
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(/[\s_]+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('oasis-theme', theme);
+  const lbl = document.getElementById('theme-lbl');
+  if (lbl) lbl.textContent = theme === 'light' ? 'Light' : 'Dark';
+}
+
+
+// ── Complaint Panel ────────────────────────────────────────────────
+
+let _activeComplaintId = null;
+let _complaintPollTimer = null;
+
+function toggleComplaintPanel() {
+  const p = document.getElementById('complaint-panel');
+  p.classList.remove('minimized');
+  p.classList.toggle('hidden');
+  if (!p.classList.contains('hidden')) {
+    loadComplaints();
+  }
+}
+
+async function loadComplaints() {
+  try {
+    const data = await authFetch('/api/complaints');
+    const msgs = document.getElementById('complaint-msgs');
+    if (!data.complaints?.length) {
+      msgs.innerHTML = '<div class="chat-msg assistant">No complaints yet. Start a new one below.</div>';
+      _activeComplaintId = null;
+      document.getElementById('complaint-input').disabled = true;
+      document.getElementById('complaint-send').disabled = true;
+      return;
+    }
+    // Show the most recent open complaint, or the latest closed
+    const active = data.complaints.find(c => c.status === 'open') || data.complaints[0];
+    _activeComplaintId = active.id;
+    document.getElementById('complaint-input').disabled = false;
+    document.getElementById('complaint-send').disabled = false;
+    await loadComplaintMessages(active.id);
+    // Start polling for new messages every 5s
+    if (_complaintPollTimer) clearInterval(_complaintPollTimer);
+    _complaintPollTimer = setInterval(() => {
+      if (_activeComplaintId) loadComplaintMessages(_activeComplaintId);
+    }, 5000);
+  } catch(e) {
+    console.error('[COMPLAINT] Load error:', e);
+  }
+}
+
+async function loadComplaintMessages(complaintId) {
+  try {
+    const data = await authFetch(`/api/complaints/${complaintId}/messages`);
+    const msgs = document.getElementById('complaint-msgs');
+    msgs.innerHTML = '';
+    const complaint = await authFetch(`/api/complaints?status=open`).then(d =>
+      d.complaints?.find(c => c.id === complaintId)
+    ).catch(() => null);
+    const statusText = complaint?.status === 'closed' ? ' (Closed)' : '';
+    const addMsg = (role, text) => {
+      const d = document.createElement('div');
+      d.className = 'chat-msg ' + role;
+      d.textContent = text;
+      msgs.appendChild(d);
+    };
+    if (!data.messages?.length) {
+      addMsg('assistant', 'No messages yet. Send your first message to the support team.');
+    } else {
+      for (const m of data.messages) {
+        const isMe = m.sender_name === S.user?.username;
+        const sender = isMe ? 'You' : 'Support Agent';
+        addMsg(isMe ? 'user' : 'assistant', `${sender}: ${m.message}`);
+      }
+    }
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    console.error('[COMPLAINT] Load messages error:', e);
+  }
+}
+
+async function createComplaint() {
+  const inp = document.getElementById('complaint-subject');
+  const subject = inp.value.trim();
+  if (!subject) { toast('Enter a subject for your complaint', 'err'); return; }
+  try {
+    const data = await authFetch('/api/complaints', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({subject})
+    });
+    inp.value = '';
+    toast('Complaint created!', 'ok');
+    _activeComplaintId = data.complaint.id;
+    document.getElementById('complaint-input').disabled = false;
+    document.getElementById('complaint-send').disabled = false;
+    document.getElementById('complaint-input').focus();
+    await loadComplaints();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+async function sendComplaintMessage() {
+  if (!_activeComplaintId) {
+    toast('Create a complaint first', 'err');
+    return;
+  }
+  const inp = document.getElementById('complaint-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  try {
+    await authFetch(`/api/complaints/${_activeComplaintId}/messages`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg})
+    });
+    await loadComplaintMessages(_activeComplaintId);
+  } catch(e) {
+    toast('Failed to send: ' + e.message, 'err');
+  }
+}
+
+
+// ── Activity Feed (superadmin only) ────────────────────────────────
+
+async function loadActivities() {
+  // Only superadmin can view activity feed
+  if (S.user?.role !== 'superadmin') {
+    document.getElementById('activity-feed').innerHTML =
+      '<div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px">Activity feed visible to superadmin only</div>';
+    document.querySelector('.section:has(.activity-feed)')?.classList.add('superadmin-only');
+    return;
+  }
+  try {
+    const data = await authFetch('/api/activity');
+    const feed = document.getElementById('activity-feed');
+    if (!data.activities || !data.activities.length) {
+      feed.innerHTML = '<div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px">No recent activity</div>';
+      return;
+    }
+    const icons = { pipeline:'▶', fault:'⚠️', diagnose:'🔍', login:'🔑', system:'⚙️' };
+    const isSuper = S.user?.role === 'superadmin';
+    feed.innerHTML = data.activities.map(a => {
+      let extra = '';
+      if (a.type === 'login' && a.username && isSuper) {
+        extra = `<span style="font-size:10px;color:var(--txt3);display:block">device: ${a.user_agent || 'unknown'}</span>`;
+      }
+      return `<div class="activity-item">
+        <span class="activity-icon">${icons[a.type]||'📋'}</span>
+        <div class="activity-body">${a.html || a.message || ''}${extra}</div>
+        <span class="activity-time">${a.created_at || ''}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { /* silent */ }
 }
 
 /* ── Bootstrap ────────────────────────────────────────────────── */
