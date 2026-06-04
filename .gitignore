@@ -1,5 +1,6 @@
 __pycache__/
 venv/
+.venv/
 .env
 *.db
 *.db-shm
@@ -7,7 +8,12 @@ venv/
 *.log
 *.pyc
 .DS_Store
-.venv/
 .vscode/
 notebooks/
-
+logs/
+data/*.csv
+dist/
+build/
+*.spec
+*.exe
+*.msi

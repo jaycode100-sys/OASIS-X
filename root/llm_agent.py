@@ -128,7 +128,12 @@ def _call_ollama(prompt: str) -> dict | None:
             timeout=OLLAMA_TIMEOUT,
         )
         resp.raise_for_status()
-        raw = resp.json().get("response", "").strip()
+        data = resp.json()
+        # Check for Ollama error in response (e.g. "Cannot read 'image.png'")
+        if "error" in data:
+            logger.warning(f"Ollama returned an error: {data['error'][:300]}")
+            return None
+        raw = data.get("response", "").strip()
 
         # The model is prompted to return JSON — parse it
         # Strip markdown code fences if present
@@ -369,7 +374,11 @@ def generate_4line_summary(data: dict) -> dict:
                 timeout=SUMMARY_TIMEOUT,
             )
             if resp.status_code == 200:
-                raw = resp.json().get("response", "").strip()
+                data = resp.json()
+                if "error" in data:
+                    logger.warning(f"Ollama returned an error in summary: {data['error'][:300]}")
+                    raise Exception(data["error"])
+                raw = data.get("response", "").strip()
                 # Try to parse as JSON first
                 try:
                     obj = json.loads(raw)

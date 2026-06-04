@@ -134,6 +134,10 @@ def _call_generate(prompt: str, model: str) -> str | None:
                     obj = json.loads(line.decode())
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     continue
+                if "error" in obj:
+                    logger.warning(f"Ollama returned an error: {obj['error'][:300]}")
+                    _trace(f"  OLLAMA ERROR: {obj['error'][:300]}")
+                    return None
                 token = obj.get("response", "")
                 if token:
                     parts.append(token)
