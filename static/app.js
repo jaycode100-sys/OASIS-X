@@ -899,6 +899,7 @@ function logout() {
 
 /* ── Init (after auth check) ──────────────────────────────────── */
 function afterAuth() {
+  try {
   initCharts();
   updateClock();
   setInterval(updateClock, 1000);
@@ -1019,8 +1020,7 @@ function afterAuth() {
   // Logs refresh
   document.getElementById('logs-refresh').addEventListener('click', loadLogs);
 
-  // Logout
-  document.getElementById('logout-btn').addEventListener('click', logout);
+  // Logout (bound to dropdown Sign Out below)
 
   // User management (superadmin only)
   const userMgmt = document.getElementById('user-mgmt-section');
@@ -1086,7 +1086,7 @@ function afterAuth() {
   });
   document.getElementById('dropdown-logout').addEventListener('click', () => {
     document.getElementById('profile-dropdown').classList.add('hidden');
-    document.getElementById('logout-btn').click();
+    logout();
   });
   document.addEventListener('click', () => {
     document.getElementById('profile-dropdown').classList.add('hidden');
@@ -1097,14 +1097,16 @@ function afterAuth() {
     if (!file) return;
     try {
       const b64 = await toBase64(file);
+      // Convert to standardized WebP format via canvas
+      const webp = await convertToWebP(b64);
       await authFetch('/api/profile', {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({settings: {avatar_data: b64}})
+        body: JSON.stringify({settings: {avatar_data: webp}})
       });
       S.user.profile = S.user.profile || {};
       S.user.profile.settings = S.user.profile.settings || {};
-      S.user.profile.settings.avatar_data = b64;
+      S.user.profile.settings.avatar_data = webp;
       updateProfileUI();
       toast('Photo updated!', 'ok');
     } catch (err) {
@@ -1138,6 +1140,7 @@ function afterAuth() {
     document.getElementById('complaint-subject').focus();
   });
   loadComplaints();
+  } catch(e) { console.error('[INIT] afterAuth error:', e); }
 }
 
 // ── Profile Modal ──────────────────────────────────────────────────
@@ -1235,6 +1238,7 @@ function updateProfileUI() {
   const initials = getInitials(displayName);
   const role = S.user?.role || 'user';
 
+  document.getElementById('profile-trigger').title = displayName + "'s Profile";
   document.getElementById('profile-greeting').textContent = 'Hi, ' + displayName;
   document.getElementById('dropdown-name').textContent = displayName;
   document.getElementById('dropdown-role-badge').textContent = role === 'superadmin' ? 'Superadmin' : 'User';
@@ -1261,6 +1265,26 @@ function toBase64(file) {
     r.onload = () => resolve(r.result);
     r.onerror = reject;
     r.readAsDataURL(file);
+  });
+}
+
+function convertToWebP(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 256;
+      const s = Math.min(max / img.width, max / img.height, 1);
+      const w = Math.round(img.width * s);
+      const h = Math.round(img.height * s);
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/webp', 0.8));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
   });
 }
 

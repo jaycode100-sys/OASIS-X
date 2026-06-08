@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from typing import Literal, Optional
-import hashlib, json
+import hashlib, json, time
 
 from api.auth import get_current_user
 from models.data_simulator import generate_network_data
@@ -29,20 +29,14 @@ router = APIRouter()
 CityType = Literal["Lagos", "Abuja", "PortHarcourt", "Kano"]
 SeasonType = Literal["harmattan", "rainy", "dry", "normal"]
 
-# Simple in-memory cache keyed by (city, season, n)
-_pipeline_cache: dict = {}
-
 def _run_pipeline(city, season, n, apply_drift=True):
-    """Run or return cached pipeline result."""
-    key = f"{city}:{season}:{n}"
-    if key in _pipeline_cache:
-        return _pipeline_cache[key]
-    df = generate_network_data(n=n, season=season, city=city)
+    """Run the full pipeline — generates fresh data each call with a time-based seed."""
+    t = int(time.time() * 1000) % 1000000
+    df = generate_network_data(n=n, season=season, city=city, seed=t)
     if apply_drift:
-        df = simulate_ncc_drift(df, city=city)
+        df = simulate_ncc_drift(df, city=city, drift_seed=t + 1)
     df = detect_anomalies(df, retrain=False)
     df = process_decisions(df)
-    _pipeline_cache[key] = df
     return df
 
 

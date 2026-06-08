@@ -1,18 +1,22 @@
 import logging
-import os
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-logger = logging.getLogger(__name__)
+from config import settings
 
-from api.routes import router
-from api.auth import router as auth_router, seed_default_users
-from data.database import init_db
+# ── Structured logging ──
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("oasis-x")
 
+# ── App factory ──
 app = FastAPI(
     title="OASIS-X",
     description=(
@@ -22,9 +26,11 @@ app = FastAPI(
         "for Lagos, Abuja, Port Harcourt, and Kano."
     ),
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-# CORS — allow browser requests from the same origin and local dev
+# ── CORS ──
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,42 +38,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (dashboard UI)
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
-if os.path.isdir(STATIC_DIR):
+# ── Static files ──
+STATIC_DIR = __import__("os").path.join(__import__("os").path.dirname(__file__), "..", "static")
+if __import__("os").path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# API routes
+
+# ── Global exception handler ──
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s %s", request.method, request.url)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Check server logs for details."},
+    )
+
+
+# ── Routes ──
+from api.routes import router  # noqa: E402
+from api.auth import router as auth_router, seed_default_users  # noqa: E402
+from data.database import init_db  # noqa: E402
+
 app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api", tags=["Pipeline"])
 
 
+# ── Page routes ──
 @app.get("/login", include_in_schema=False)
 def login_page():
-    """Serve the standalone login page."""
-    login = os.path.join(STATIC_DIR, "login.html")
-    if os.path.isfile(login):
+    login = __import__("os").path.join(STATIC_DIR, "login.html")
+    if __import__("os").path.isfile(login):
         return FileResponse(login)
-    return {"error": "login.html not found"}
-
-
-@app.on_event("startup")
-def startup():
-    """Initialise database tables and seed default users on server start."""
-    try:
-        init_db()
-        seed_default_users()
-        logger.info("Startup complete — DB initialised, users seeded")
-    except Exception as e:
-        logger.critical(f"Startup failed: {e}")
-        sys.exit(1)
+    return JSONResponse(status_code=404, content={"detail": "login.html not found"})
 
 
 @app.get("/", include_in_schema=False)
 def home():
-    """Serve the dashboard UI."""
-    index = os.path.join(STATIC_DIR, "index.html")
-    if os.path.isfile(index):
+    index = __import__("os").path.join(STATIC_DIR, "index.html")
+    if __import__("os").path.isfile(index):
         return FileResponse(index)
     return {
         "service": "SWIFT FHS",
@@ -75,3 +83,15 @@ def home():
         "docs": "/docs",
         "note": "Place index.html in static/ to serve the dashboard",
     }
+
+
+# ── Startup ──
+@app.on_event("startup")
+def startup():
+    try:
+        init_db()
+        seed_default_users()
+        logger.info("Startup complete — DB initialised, users seeded")
+    except Exception as e:
+        logger.critical("Startup failed: %s", e)
+        sys.exit(1)

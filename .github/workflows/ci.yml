@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+      - name: Ruff check
+        run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx pytest-cov
+      - name: Run tests
+        run: pytest --cov=api --cov=root --cov=models --cov-report=term-missing -x
+        env:
+          OASIS_SECRET_KEY: ci-test-key
+          OASIS_DB_DIR: /tmp/oasis-test
+
+  # Build .exe only on tagged releases (too slow for every push)
+  build-exe:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pywebview Pillow
+      - name: Generate .ico
+        run: python -c "from PIL import Image; img=Image.open('static/oasis.png'); sz=min(img.size); left=(img.width-sz)//2; top=(img.height-sz)//2; img=img.crop((left,top,left+sz,top+sz)); img.save('static/oasis.ico', format='ICO', sizes=[(s,s) for s in [16,32,48,64,128,256]])"
+      - name: Build .exe
+        run: python build_desktop.py
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OASIS-X.exe
+          path: dist/OASIS-X.exe

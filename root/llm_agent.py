@@ -1,33 +1,17 @@
-"""
-llm_agent.py
-------------
-LLM-powered diagnosis engine for SWIFT FHS.
-
-Uses the custom 'swift-fhs' Ollama model (built on llama3.2, fine-tuned with
-Nigerian fibre network expertise and NCC QoS knowledge via Modelfile).
-
-Behaviour:
-  - If Ollama is running and 'swift-fhs' is available → real LLM inference
-  - If Ollama is unavailable / model not found → graceful fallback to the
-    rule-based engine (no crash, no silent failure — logs a warning)
-
-To activate the LLM:
-  1. ollama serve                                    (start the server)
-  2. cd models/.ollama
-  3. ollama create swift-fhs -f Modelfile            (register the model)
-"""
+"""LLM-powered diagnosis engine for SWIFT FHS."""
 
 import json
 import logging
-import os
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL = os.environ.get("SWIFT_LLM_MODEL", "swift-fhs")
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "120"))
+OLLAMA_MODEL = settings.SWIFT_LLM_MODEL
+OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
+OLLAMA_TIMEOUT = settings.OLLAMA_TIMEOUT
 
 # Set to False at module load if Ollama is confirmed unavailable
 _ollama_available: bool | None = None   # None = not yet checked

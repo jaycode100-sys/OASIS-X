@@ -1,0 +1,49 @@
+# ── Fly.io ────────────────────────────────────────────────────────────
+# First-time deploy:
+#   1. fly launch --import fly.toml --no-deploy
+#   2. fly secrets set OASIS_SECRET_KEY="<generate-a-random-key>"
+#   3. fly deploy
+#
+# Subsequent deploys:
+#   fly deploy
+#
+# Ollama sidecar (separate Fly app — the main app connects via internal DNS):
+#   1. fly launch --app oasis-ollama --image ollama/ollama:latest --region lhr --no-deploy
+#   2. fly secrets set --app oasis-ollama OLLAMA_HOST="0.0.0.0"
+#   3. fly volumes create ollama_models --app oasis-ollama --region lhr --size 10
+#   4. fly deploy --app oasis-ollama
+#   5. Set OLLAMA_BASE_URL=http://oasis-ollama.internal:11434 in main app env
+
+app = "oasis-x"
+primary_region = "lhr"  # London — good latency for Nigeria
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false   # Don't spin down
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    path = "/api/status"
+    interval = "30s"
+    timeout = "10s"
+    method = "GET"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1GB"
+
+[mounts]
+  source = "oasis_data"
+  destination = "/data"
+
+[env]
+  PORT = "8080"
+  HOST = "0.0.0.0"
+  OASIS_DB_DIR = "/data"
+  OLLAMA_BASE_URL = "http://oasis-ollama.internal:11434"

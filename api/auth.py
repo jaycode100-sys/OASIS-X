@@ -19,12 +19,11 @@ from data.database import (
 
 # ── Config ──────────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.environ.get(
-    "OASIS_SECRET_KEY",
-    "oasis-x-dev-secret-key-do-not-use-in-production",
-)
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
+from config import settings  # noqa: E402
+
+SECRET_KEY = settings.OASIS_SECRET_KEY
+ALGORITHM = settings.OASIS_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.OASIS_TOKEN_EXPIRY_HOURS * 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")

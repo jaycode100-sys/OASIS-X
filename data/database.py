@@ -1,8 +1,10 @@
 import sqlite3, json, os, threading
 from datetime import datetime
 
-DB_DIR = os.environ.get("OASIS_DB_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
-DB_PATH = os.environ.get("OASIS_DB_PATH", os.path.join(DB_DIR, "oasis.db"))
+from config import settings
+
+DB_DIR = settings.OASIS_DB_DIR
+DB_PATH = settings.OASIS_DB_PATH
 
 _local = threading.local()
 
@@ -284,8 +286,6 @@ def update_user_profile(user_id: int, **kwargs) -> dict | None:
         return get_user_profile(user_id)
     if "settings" in updates:
         updates["settings_json"] = json.dumps(updates.pop("settings"))
-    if "settings_json" in updates:
-        updates["settings_json"] = json.dumps(updates["settings_json"])
     sets = ", ".join(f"{k}=?" for k in updates)
     conn.execute(f"UPDATE user_profiles SET {sets} WHERE user_id=?", (*updates.values(), user_id))
     conn.commit()
