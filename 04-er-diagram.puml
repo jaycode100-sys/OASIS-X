@@ -1,0 +1,114 @@
+@startuml OASIS-X Entity Relationship Diagram
+!theme plain
+skinparam backgroundColor #0B0F19
+skinparam entity {
+  BackgroundColor #1A2232
+  BorderColor #FF9E00
+  FontColor #e0f0ff
+}
+skinparam relationship {
+  BackgroundColor #FF9E00
+  BorderColor #FF9E00
+  FontColor #8899b3
+}
+
+entity "users" as users {
+  * id : INTEGER <<PK>>
+  --
+  * username : TEXT <<UNIQUE>>
+  * hashed_password : TEXT
+  * role : TEXT [default 'user']
+  * created_at : TEXT
+}
+
+entity "user_profiles" as profiles {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>> <<UNIQUE>>
+  * display_name : TEXT
+  * avatar_color : TEXT [default '#FF9E00']
+  * theme : TEXT [default 'dark']
+  * settings_json : TEXT [default '{}']
+}
+
+entity "pipeline_runs" as runs {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER
+  * created_at : TEXT
+  * city : TEXT
+  * season : TEXT
+  * n_samples : INTEGER
+  * summary_json : TEXT
+  * ncc_compliance_json : TEXT
+}
+
+entity "telemetry_rows" as telemetry {
+  * id : INTEGER <<PK>>
+  --
+  * run_id : INTEGER <<FK>>
+  * row_index : INTEGER
+  * row_data_json : TEXT
+}
+
+entity "diagnosis_logs" as diag {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER
+  * run_id : INTEGER <<FK>>
+  * row_index : INTEGER
+  * diagnosis_json : TEXT
+  * source : TEXT
+  * created_at : TEXT
+}
+
+entity "chat_messages" as chat {
+  * id : INTEGER <<PK>>
+  --
+  * role : TEXT
+  * content : TEXT
+  * created_at : TEXT
+}
+
+entity "activity_logs" as activity {
+  * id : INTEGER <<PK>>
+  --
+  * type : TEXT
+  * message : TEXT
+  * html : TEXT
+  * user_id : INTEGER
+  * username : TEXT
+  * user_agent : TEXT
+  * created_at : TEXT
+}
+
+entity "complaints" as complaints {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  * subject : TEXT
+  * status : TEXT [default 'open']
+  * assigned_to : INTEGER <<FK>>
+  * created_at : TEXT
+  * updated_at : TEXT
+}
+
+entity "complaint_messages" as msgs {
+  * id : INTEGER <<PK>>
+  --
+  * complaint_id : INTEGER <<FK>>
+  * sender_id : INTEGER <<FK>>
+  * message : TEXT
+  * created_at : TEXT
+}
+
+users ||--|| profiles : "1:1"
+users ||--o{ runs : "1:N"
+users ||--o{ activity : "1:N"
+users ||--o{ complaints : "1:N"
+runs ||--o{ telemetry : "1:N"
+runs ||--o{ diag : "1:N"
+complaints ||--o{ msgs : "1:N"
+users ||--o{ diag : "1:N"
+
+@enduml

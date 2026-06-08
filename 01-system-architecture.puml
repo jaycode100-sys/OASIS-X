@@ -1,0 +1,58 @@
+@startuml OASIS-X System Architecture
+!theme plain
+skinparam backgroundColor #0B0F19
+skinparam component {
+  BackgroundColor #1A2232
+  BorderColor #FF9E00
+  FontColor #e0f0ff
+}
+skinparam arrow {
+  Color #FF9E00
+  FontColor #8899b3
+}
+skinparam rectangle {
+  BackgroundColor #121824
+  BorderColor #3b82f6
+  FontColor #e0f0ff
+}
+skinparam package {
+  BackgroundColor rgba(0,0,0,0)
+  BorderColor #3b82f6
+  FontColor #3b82f6
+}
+
+package "CLIENT LAYER" as CL {
+  rectangle "Web Browser\nindex.html / login.html\nChart.js" as Browser
+  rectangle "Desktop App\nPyWebView Native Window\nFallback to Browser" as Desktop
+}
+
+package "SERVER LAYER" as SL {
+  rectangle "FastAPI Web Server\napp.py - routes.py - auth.py" as FastAPI
+  rectangle "Core Engine\ndecision_engine.py\ndigital_twin.py\nchat_agent.py / llm_agent.py" as Core
+  rectangle "ASGI Server\nUvicorn\nstart_server.py" as Uvicorn
+}
+
+package "DATA & ML LAYER" as DML {
+  rectangle "SQLite Database\ndata/database.py\nWAL mode" as DB
+  rectangle "ML / Anomaly Detection\nIsolationForest (sklearn)\nncc_feed.py" as ML
+  rectangle "Data Simulator\nNigerian telemetry\nHarmattan/Rain/Time" as Sim
+}
+
+package "EXTERNAL / INFRA" as EXT {
+  rectangle "Ollama LLM\nswift-fhs / nexus-chat\nllama3.2:1b" as Ollama
+  rectangle "Railway Cloud\nNixpacks Deploy" as Railway
+  rectangle "PyInstaller\nStandalone .exe" as PyInst
+}
+
+Browser --> FastAPI : HTTP/HTTPS
+Desktop --> FastAPI : HTTP (localhost)
+FastAPI --> Core : Calls
+FastAPI --> Uvicorn : ASGI
+Core --> DB : SQL (SQLite)
+Core --> ML : Feature data
+Core --> Sim : Config
+Core --> Ollama : HTTP API (Ollama)
+FastAPI --> Railway : Deploy
+FastAPI --> PyInst : Bundle
+
+@enduml
