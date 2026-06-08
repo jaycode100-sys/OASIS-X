@@ -1,8 +1,13 @@
+import logging
+import os
+import sys
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-import os
+
+logger = logging.getLogger(__name__)
 
 from api.routes import router
 from api.auth import router as auth_router, seed_default_users
@@ -49,8 +54,13 @@ def login_page():
 @app.on_event("startup")
 def startup():
     """Initialise database tables and seed default users on server start."""
-    init_db()
-    seed_default_users()
+    try:
+        init_db()
+        seed_default_users()
+        logger.info("Startup complete — DB initialised, users seeded")
+    except Exception as e:
+        logger.critical(f"Startup failed: {e}")
+        sys.exit(1)
 
 
 @app.get("/", include_in_schema=False)
