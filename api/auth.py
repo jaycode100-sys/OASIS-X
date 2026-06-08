@@ -160,6 +160,7 @@ def get_me(current_user: dict = Depends(get_current_user)):
             "display_name": profile["display_name"] if profile else current_user["username"],
             "avatar_color": profile["avatar_color"] if profile else "#FF9E00",
             "theme": profile["theme"] if profile else "dark",
+            "settings": profile["settings"] if profile and profile.get("settings") else {},
         } if profile else {},
     }
 

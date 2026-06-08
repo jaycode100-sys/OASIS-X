@@ -125,6 +125,7 @@ async function checkAuth() {
     // Apply saved theme from profile
     const theme = S.user.profile?.theme || localStorage.getItem('oasis-theme') || 'dark';
     applyTheme(theme);
+    updateProfileUI();
     afterAuth();
   } catch {
     setToken(null);
@@ -1074,8 +1075,42 @@ function afterAuth() {
     resizeTimer = setTimeout(() => drawTwin(window._lastRows || []), 300);
   });
 
-  // ── Profile Modal ──
-  document.getElementById('profile-btn').addEventListener('click', openProfileModal);
+  // ── Profile Dropdown ──
+  document.getElementById('profile-trigger').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('profile-dropdown').classList.toggle('hidden');
+  });
+  document.getElementById('dropdown-edit-profile').addEventListener('click', () => {
+    document.getElementById('profile-dropdown').classList.add('hidden');
+    openProfileModal();
+  });
+  document.getElementById('dropdown-logout').addEventListener('click', () => {
+    document.getElementById('profile-dropdown').classList.add('hidden');
+    document.getElementById('logout-btn').click();
+  });
+  document.addEventListener('click', () => {
+    document.getElementById('profile-dropdown').classList.add('hidden');
+  });
+  // Avatar upload
+  document.getElementById('avatar-upload-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const b64 = await toBase64(file);
+      await authFetch('/api/profile', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({settings: {avatar_data: b64}})
+      });
+      S.user.profile = S.user.profile || {};
+      S.user.profile.settings = S.user.profile.settings || {};
+      S.user.profile.settings.avatar_data = b64;
+      updateProfileUI();
+      toast('Photo updated!', 'ok');
+    } catch (err) {
+      toast('Failed to upload photo: ' + err.message, 'err');
+    }
+  });
   document.getElementById('profile-modal-close').addEventListener('click', () => {
     document.getElementById('profile-modal-overlay').classList.add('hidden');
   });
@@ -1117,8 +1152,18 @@ async function openProfileModal() {
   document.getElementById('profile-joined').textContent = me.created_at || '—';
 
   const avatarEl = document.getElementById('profile-avatar');
-  avatarEl.textContent = getInitials(me.username);
-  avatarEl.style.background = me.profile?.avatar_color || '#FF9E00';
+  const avatarData = me.profile?.settings?.avatar_data;
+  if (avatarData) {
+    avatarEl.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = avatarData;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+    avatarEl.appendChild(img);
+  } else {
+    avatarEl.innerHTML = '';
+    avatarEl.textContent = getInitials(me.username);
+    avatarEl.style.background = me.profile?.avatar_color || '#FF9E00';
+  }
 
   document.getElementById('profile-display-name').value = me.profile?.display_name || me.username || '';
   document.getElementById('theme-switch').checked = (me.profile?.theme || 'dark') === 'light';
@@ -1159,6 +1204,7 @@ async function saveProfile() {
     });
     S.user.profile = { ...(S.user.profile || {}), display_name: displayName, theme, avatar_color: avatarColor };
     applyTheme(theme);
+    updateProfileUI();
     toast('Profile saved!', 'ok');
   } catch(e) {
     toast('Failed to save profile: ' + e.message, 'err');
@@ -1178,6 +1224,44 @@ function applyTheme(theme) {
   localStorage.setItem('oasis-theme', theme);
   const lbl = document.getElementById('theme-lbl');
   if (lbl) lbl.textContent = theme === 'light' ? 'Light' : 'Dark';
+}
+
+/* ── Profile UI (greeting + avatar in header) ── */
+function updateProfileUI() {
+  const p = S.user?.profile || {};
+  const displayName = p.display_name || S.user?.username || 'user';
+  const avatarData = p.settings?.avatar_data;
+  const color = p.avatar_color || '#FF9E00';
+  const initials = getInitials(displayName);
+  const role = S.user?.role || 'user';
+
+  document.getElementById('profile-greeting').textContent = 'Hi, ' + displayName;
+  document.getElementById('dropdown-name').textContent = displayName;
+  document.getElementById('dropdown-role-badge').textContent = role === 'superadmin' ? 'Superadmin' : 'User';
+  document.getElementById('dropdown-role-badge').className = 'dropdown-role-badge ' + role;
+
+  [document.getElementById('trigger-avatar'), document.getElementById('dropdown-avatar')].forEach(el => {
+    if (avatarData) {
+      el.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = avatarData;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+      el.appendChild(img);
+    } else {
+      el.innerHTML = '';
+      el.textContent = initials;
+      el.style.background = color;
+    }
+  });
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 }
 
 

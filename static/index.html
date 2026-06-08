@@ -39,7 +39,28 @@
     </div>
     <button class="chat-toggle" id="chat-toggle" title="Chat with Nexus">💬</button>
     <button class="chat-toggle" id="complaint-toggle" title="Complaints / Help">📞</button>
-    <button class="header-btn" id="profile-btn" title="Your Profile">👤</button>
+    <div class="profile-trigger" id="profile-trigger">
+      <div class="profile-trigger-avatar" id="trigger-avatar">?</div>
+      <span class="profile-greeting" id="profile-greeting">Hi, user</span>
+      <span class="profile-arrow">▾</span>
+      <div class="profile-dropdown hidden" id="profile-dropdown">
+        <div class="dropdown-hdr">
+          <div class="dropdown-avatar-wrap">
+            <div class="dropdown-avatar" id="dropdown-avatar">?</div>
+            <label class="avatar-upload-btn" id="avatar-upload-label" title="Change photo">📷</label>
+            <input type="file" id="avatar-upload-input" accept="image/*" hidden />
+          </div>
+          <div class="dropdown-info">
+            <div class="dropdown-name" id="dropdown-name">user</div>
+            <div class="dropdown-role-badge" id="dropdown-role-badge">User</div>
+          </div>
+        </div>
+        <div class="dropdown-body">
+          <div class="dropdown-row" id="dropdown-edit-profile"><span>✏️</span> Edit Full Profile</div>
+          <div class="dropdown-row" id="dropdown-logout"><span>🚪</span> Sign Out</div>
+        </div>
+      </div>
+    </div>
     <label class="toggle-wrap">
       <input type="checkbox" id="auto-refresh" />
       <span class="toggle"></span>

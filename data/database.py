@@ -278,10 +278,12 @@ def create_user_profile(user_id: int, display_name: str = None, avatar_color: st
 
 def update_user_profile(user_id: int, **kwargs) -> dict | None:
     conn = _get_conn()
-    allowed = {"display_name", "avatar_color", "theme", "settings_json"}
+    allowed = {"display_name", "avatar_color", "theme", "settings_json", "settings"}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return get_user_profile(user_id)
+    if "settings" in updates:
+        updates["settings_json"] = json.dumps(updates.pop("settings"))
     if "settings_json" in updates:
         updates["settings_json"] = json.dumps(updates["settings_json"])
     sets = ", ".join(f"{k}=?" for k in updates)
