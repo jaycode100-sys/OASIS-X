@@ -674,29 +674,20 @@ def get_weather(
     url = (
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={coords['lat']}&longitude={coords['lon']}"
-        f"&current_weather=true"
         f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
-        f"&timezone={coords['tz']}"
+        f"&timezone={coords['tz']}&forecast_days=1"
     )
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "OASIS-X/1.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read().decode()
         data = json.loads(raw)
-        # Open-Meteo returns either "current" or "current_weather"
-        current = data.get("current") or data.get("current_weather") or {}
-        code = current.get("weather_code") or current.get("weathercode") or 0
+        current = data.get("current") or {}
+        code = current.get("weather_code", 0)
         temp = current.get("temperature_2m")
         humidity = current.get("relative_humidity_2m")
-        wind = current.get("wind_speed_10m") or current.get("windspeed_10m")
+        wind = current.get("wind_speed_10m")
         icon, desc = WMO_CODES.get(code, ("🌡️", "Unknown"))
-        if temp is None:
-            # Try current_weather format
-            cw = data.get("current_weather", {})
-            temp = cw.get("temperature")
-            wind = cw.get("windspeed")
-            code = cw.get("weathercode", 0)
-            icon, desc = WMO_CODES.get(code, ("🌡️", "Unknown"))
         return {
             "city": city,
             "temperature": round(temp, 1) if temp is not None else None,
