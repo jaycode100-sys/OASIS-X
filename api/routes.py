@@ -662,7 +662,7 @@ WMO_CODES = {
     95: ("⛈️", "Thunderstorm"), 96: ("⛈️", "Thunderstorm with hail"), 99: ("⛈️", "Thunderstorm with heavy hail"),
 }
 
-import urllib.request
+import requests as _requests
 
 @router.get("/weather")
 def get_weather(
@@ -678,10 +678,9 @@ def get_weather(
         f"&timezone={coords['tz']}&forecast_days=1"
     )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "OASIS-X/1.0"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            raw = resp.read().decode()
-        data = json.loads(raw)
+        r = _requests.get(url, timeout=15, headers={"User-Agent": "OASIS-X/1.0"})
+        r.raise_for_status()
+        data = r.json()
         current = data.get("current") or {}
         code = current.get("weather_code", 0)
         temp = current.get("temperature_2m")

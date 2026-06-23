@@ -122,8 +122,8 @@ async function fetchWeather() {
     const el = document.getElementById('hdr-weather');
     if (el) {
       if (d.error || d.description === 'Unavailable') {
-        el.querySelector('.val').innerHTML = `🌡️ --`;
-        el.title = 'Weather unavailable';
+        el.querySelector('.val').innerHTML = `🌡️ N/A`;
+        el.title = d.error || 'Weather unavailable';
       } else {
         const temp = d.temperature != null ? d.temperature + '°C' : '--';
         el.querySelector('.val').innerHTML = `${d.icon || '🌡️'} ${temp} · ${d.description || ''}`;
@@ -131,8 +131,9 @@ async function fetchWeather() {
       }
     }
   } catch(e) {
+    console.error('[WEATHER] Fetch failed:', e.message || e);
     const el = document.getElementById('hdr-weather');
-    if (el) el.querySelector('.val').innerHTML = '🌡️ --';
+    if (el) el.querySelector('.val').innerHTML = '🌡️ N/A';
   }
 }
 
