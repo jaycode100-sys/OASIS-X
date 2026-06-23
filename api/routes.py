@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
+from fastapi.responses import StreamingResponse
 from typing import Literal, Optional
-import hashlib, json, time
+import hashlib, json, time, io, csv
+from datetime import datetime
 
 from api.auth import get_current_user
 from models.data_simulator import generate_network_data
@@ -22,6 +24,7 @@ from data.database import (
     get_user_profile, update_user_profile,
     create_complaint, get_complaint, get_complaints, get_complaint_messages,
     add_complaint_message, get_all_open_complaints, update_complaint_status,
+    get_cases_for_user, get_total_unread_for_user, mark_case_read,
 )
 
 router = APIRouter()
@@ -383,19 +386,85 @@ def update_profile(
     body: dict = Body(...),
 ):
     """Update the current user's profile (theme, display_name, avatar_color, settings)."""
+    old_profile = get_user_profile(_user["id"])
     profile = update_user_profile(_user["id"], **body)
+    # Log what changed
+    changes = []
+    if old_profile and body:
+        if "display_name" in body and body["display_name"] != old_profile.get("display_name"):
+            changes.append(f"Display name → {body['display_name']}")
+        if "avatar_color" in body and body["avatar_color"] != old_profile.get("avatar_color"):
+            changes.append("Avatar colour updated")
+        if "settings" in body:
+            new_settings = body["settings"]
+            old_settings = old_profile.get("settings", {}) or {}
+            if isinstance(old_settings, str):
+                try: old_settings = json.loads(old_settings)
+                except: old_settings = {}
+            if "avatar_data" in new_settings and new_settings.get("avatar_data") and new_settings["avatar_data"] != old_settings.get("avatar_data"):
+                changes.append("Profile photo updated")
+            if "telegram" in new_settings and new_settings.get("telegram") != old_settings.get("telegram"):
+                changes.append(f"Telegram → {new_settings['telegram']}")
+            if "whatsapp" in new_settings and new_settings.get("whatsapp") != old_settings.get("whatsapp"):
+                changes.append(f"WhatsApp → {new_settings['whatsapp']}")
+    if changes:
+        log_activity(
+            act_type="profile",
+            message=f"Profile updated: {', '.join(changes)}",
+            html=f'Profile updated: <strong>{", ".join(changes)}</strong>',
+            user_id=_user["id"],
+            username=_user["username"],
+        )
     return {"profile": profile}
 
 
-# ── Complaints (per-user) ────────────────────────────────────────────────────────────
+# ── Cases (messaging-app style) ──────────────────────────────────────────────────
+
+@router.get("/cases")
+def list_cases(
+    _user: dict = Depends(get_current_user),
+):
+    """List cases with last message preview and unread count — messaging app style."""
+    cases = get_cases_for_user(_user["id"], _user["role"])
+    return {"cases": cases}
+
+
+@router.get("/cases/unread")
+def cases_unread(_user: dict = Depends(get_current_user)):
+    """Get total unread count for badge display."""
+    count = get_total_unread_for_user(_user["id"], _user["role"])
+    return {"unread": count}
+
+
+@router.post("/cases/{case_id}/read")
+def mark_case_read_endpoint(
+    case_id: int,
+    _user: dict = Depends(get_current_user),
+):
+    """Mark a case as read."""
+    c = get_complaint(case_id)
+    if not c:
+        raise HTTPException(404, "Case not found")
+    if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
+        raise HTTPException(403, detail="Access denied")
+    mark_case_read(case_id, _user["id"])
+    return {"marked": True}
+
 
 @router.post("/complaints")
 def create_complaint_endpoint(
     _user: dict = Depends(get_current_user),
     subject: str = Body(..., embed=True),
 ):
-    """Create a new complaint (for regular users to chat with agent)."""
+    """Create a new case."""
     c = create_complaint(_user["id"], subject)
+    log_activity(
+        act_type="case",
+        message=f"New case created: {c.get('case_number', c['id'])} — {subject}",
+        html=f'New case <strong>{c.get("case_number", "")}</strong>: {subject}',
+        user_id=_user["id"],
+        username=_user["username"],
+    )
     return {"complaint": c}
 
 
@@ -404,7 +473,7 @@ def list_complaints(
     _user: dict = Depends(get_current_user),
     status: str = Query(None),
 ):
-    """List complaints. Regular users see their own; superadmin sees all."""
+    """List complaints (legacy endpoint — use /cases instead)."""
     if _user["role"] == "superadmin":
         if status == "all":
             complaints = get_complaints(user_id=None, status=None)
@@ -422,14 +491,14 @@ def get_complaint_messages_endpoint(
     complaint_id: int,
     _user: dict = Depends(get_current_user),
 ):
-    """Get messages for a complaint. Only the owner or superadmin may read."""
+    """Get messages for a case."""
     c = get_complaint(complaint_id)
     if not c:
-        raise HTTPException(404, "Complaint not found")
+        raise HTTPException(404, "Case not found")
     if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
-        raise HTTPException(403, detail="You do not have access to this complaint")
+        raise HTTPException(403, detail="Access denied")
     msgs = get_complaint_messages(complaint_id)
-    return {"messages": msgs}
+    return {"messages": msgs, "complaint": c}
 
 
 @router.post("/complaints/{complaint_id}/messages")
@@ -438,12 +507,12 @@ def post_complaint_message(
     _user: dict = Depends(get_current_user),
     message: str = Body(..., embed=True),
 ):
-    """Add a message to a complaint. Only the owner or superadmin may post."""
+    """Add a message to a case."""
     c = get_complaint(complaint_id)
     if not c:
-        raise HTTPException(404, "Complaint not found")
+        raise HTTPException(404, "Case not found")
     if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
-        raise HTTPException(403, detail="You do not have access to this complaint")
+        raise HTTPException(403, detail="Access denied")
     msg = add_complaint_message(complaint_id, _user["id"], message)
     if _user["role"] == "superadmin":
         update_complaint_status(complaint_id, "open", assigned_to=_user["id"])
@@ -455,12 +524,12 @@ def get_complaint_endpoint(
     complaint_id: int,
     _user: dict = Depends(get_current_user),
 ):
-    """Get a single complaint. Only the owner or superadmin may view."""
+    """Get a single case."""
     c = get_complaint(complaint_id)
     if not c:
-        raise HTTPException(404, "Complaint not found")
+        raise HTTPException(404, "Case not found")
     if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
-        raise HTTPException(403, detail="You do not have access to this complaint")
+        raise HTTPException(403, detail="Access denied")
     return {"complaint": c}
 
 
@@ -468,14 +537,44 @@ def get_complaint_endpoint(
 def close_complaint(
     complaint_id: int,
     _user: dict = Depends(get_current_user),
+    body: dict = Body(None),
 ):
-    """Close a complaint. Only the owner or superadmin may close."""
+    """Close a case. Superadmin or case owner."""
     c = get_complaint(complaint_id)
     if not c:
-        raise HTTPException(404, "Complaint not found")
+        raise HTTPException(404, "Case not found")
     if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
-        raise HTTPException(403, detail="You do not have access to this complaint")
-    c = update_complaint_status(complaint_id, "closed")
+        raise HTTPException(403, detail="Access denied")
+    notes = (body or {}).get("resolution_notes", "")
+    c = update_complaint_status(complaint_id, "closed", resolution_notes=notes)
+    # Add system message
+    add_complaint_message(complaint_id, _user["id"],
+                          f"Case closed by {_user['username']}" + (f": {notes}" if notes else ""),
+                          message_type="system")
+    log_activity(
+        act_type="case",
+        message=f"Case {c.get('case_number', complaint_id)} closed by {_user['username']}",
+        html=f'Case <strong>{c.get("case_number", "")}</strong> closed by <strong>{_user["username"]}</strong>',
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+    return {"complaint": c}
+
+
+@router.post("/complaints/{complaint_id}/priority")
+def set_case_priority(
+    complaint_id: int,
+    _user: dict = Depends(get_current_user),
+    body: dict = Body(...),
+):
+    """Set case priority. Superadmin only."""
+    if _user["role"] != "superadmin":
+        raise HTTPException(403, detail="Superadmin only")
+    c = get_complaint(complaint_id)
+    if not c:
+        raise HTTPException(404, "Case not found")
+    priority = body.get("priority", "normal")
+    c = update_complaint_status(complaint_id, c["status"], priority=priority)
     return {"complaint": c}
 
 
@@ -511,6 +610,100 @@ def list_activities(
     if _user["role"] != "superadmin":
         raise HTTPException(status_code=403, detail="Only superadmin can view all activity logs")
     return {"activities": get_activities(limit)}
+
+
+@router.get("/activity/download")
+def download_activities(
+    _user: dict = Depends(get_current_user),
+    limit: int = Query(200, ge=1, le=1000),
+):
+    """Download activity log as CSV."""
+    if _user["role"] != "superadmin":
+        acts = get_activities(limit, user_id=_user["id"])
+    else:
+        acts = get_activities(limit)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Type", "Message", "Username", "User Agent", "Timestamp"])
+    for a in acts:
+        writer.writerow([a["id"], a["type"], a["message"], a.get("username", ""), a.get("user_agent", ""), a.get("created_at", "")])
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=activity_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"},
+    )
+
+
+# ── Weather (Open-Meteo, free, no API key) ───────────────────────────────────────
+
+CITY_COORDS = {
+    "Lagos":        {"lat": 6.5244, "lon": 3.3792, "tz": "Africa/Lagos"},
+    "Abuja":        {"lat": 9.0579, "lon": 7.4951, "tz": "Africa/Lagos"},
+    "PortHarcourt": {"lat": 4.8156, "lon": 7.0498, "tz": "Africa/Lagos"},
+    "Kano":         {"lat": 12.0022, "lon": 8.5920, "tz": "Africa/Lagos"},
+}
+
+WMO_CODES = {
+    0: ("☀️", "Clear sky"), 1: ("🌤️", "Mainly clear"), 2: ("⛅", "Partly cloudy"), 3: ("☁️", "Overcast"),
+    45: ("🌫️", "Fog"), 48: ("🌫️", "Rime fog"),
+    51: ("🌦️", "Light drizzle"), 53: ("🌦️", "Moderate drizzle"), 55: ("🌧️", "Dense drizzle"),
+    56: ("🌧️", "Freezing drizzle"), 57: ("🌧️", "Heavy freezing drizzle"),
+    61: ("🌧️", "Slight rain"), 63: ("🌧️", "Moderate rain"), 65: ("🌧️", "Heavy rain"),
+    66: ("🌧️", "Freezing rain"), 67: ("🌧️", "Heavy freezing rain"),
+    71: ("❄️", "Slight snow"), 73: ("❄️", "Moderate snow"), 75: ("❄️", "Heavy snow"),
+    77: ("❄️", "Snow grains"),
+    80: ("🌦️", "Slight showers"), 81: ("🌧️", "Moderate showers"), 82: ("🌧️", "Violent showers"),
+    85: ("❄️", "Slight snow showers"), 86: ("❄️", "Heavy snow showers"),
+    95: ("⛈️", "Thunderstorm"), 96: ("⛈️", "Thunderstorm with hail"), 99: ("⛈️", "Thunderstorm with heavy hail"),
+}
+
+import urllib.request
+
+@router.get("/weather")
+def get_weather(
+    city: str = Query("Lagos"),
+    _user: dict = Depends(get_current_user),
+):
+    """Get live weather for a Nigerian city via Open-Meteo (free, no API key)."""
+    coords = CITY_COORDS.get(city, CITY_COORDS["Lagos"])
+    url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={coords['lat']}&longitude={coords['lon']}"
+        f"&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m"
+        f"&timezone={coords['tz']}"
+    )
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "OASIS-X/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        current = data.get("current", {})
+        code = current.get("weathercode", 0)
+        icon, desc = WMO_CODES.get(code, ("🌡️", "Unknown"))
+        return {
+            "city": city,
+            "temperature": current.get("temperature_2m"),
+            "humidity": current.get("relative_humidity_2m"),
+            "wind_speed": current.get("windspeed_10m"),
+            "weather_code": code,
+            "icon": icon,
+            "description": desc,
+            "unit": data.get("current_units", {}).get("temperature_2m", "°C"),
+        }
+    except Exception as e:
+        return {"city": city, "error": str(e), "icon": "❓", "description": "Unavailable"}
+
+
+@router.get("/weather/all")
+def get_all_weather(_user: dict = Depends(get_current_user)):
+    """Get weather for all cities at once."""
+    results = {}
+    for city in CITY_COORDS:
+        try:
+            results[city] = get_weather(city=city, _user=_user)
+        except Exception:
+            results[city] = {"city": city, "icon": "❓", "description": "Unavailable"}
+    return results
 
 
 # ── Notifications ────────────────────────────────────────────────────────────────

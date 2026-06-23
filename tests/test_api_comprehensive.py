@@ -579,13 +579,36 @@ async def test_create_complaint(cli):
 
 
 @pytest.mark.asyncio
-async def test_list_complaints(cli):
+async def test_list_complaints_superadmin(cli):
     r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
     t = r.json()["access_token"]
     h = {"Authorization": f"Bearer {t}"}
+    r = await cli.post("/api/complaints", json={"subject": "Test 1"}, headers=h)
     r = await cli.get("/api/complaints", headers=h)
     assert r.status_code == 200
     assert "complaints" in r.json()
+    # Superadmin sees only open complaints by default
+    for c in r.json()["complaints"]:
+        assert c["status"] == "open"
+
+
+@pytest.mark.asyncio
+async def test_list_complaints_user_own_only(cli):
+    r = await cli.post("/api/auth/login", json={"username": "user", "password": "user123"})
+    ut = r.json()["access_token"]
+    uh = {"Authorization": f"Bearer {ut}"}
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    at = r.json()["access_token"]
+    ah = {"Authorization": f"Bearer {at}"}
+    r = await cli.get("/api/auth/me", headers=uh)
+    uid = r.json()["id"]
+    await cli.post("/api/complaints", json={"subject": "Admin issue"}, headers=ah)
+    await cli.post("/api/complaints", json={"subject": "User issue"}, headers=uh)
+    r = await cli.get("/api/complaints", headers=uh)
+    assert r.status_code == 200
+    # User should see only their own complaint
+    for c in r.json()["complaints"]:
+        assert c["user_id"] == uid
 
 
 @pytest.mark.asyncio
@@ -623,6 +646,83 @@ async def test_close_complaint(cli):
     r = await cli.post(f"/api/complaints/{cid}/close", headers=h)
     assert r.status_code == 200
     assert r.json()["complaint"]["status"] == "closed"
+
+
+@pytest.mark.asyncio
+async def test_complaint_other_user_messages_forbidden(cli):
+    r = await cli.post("/api/auth/login", json={"username": "user", "password": "user123"})
+    ut = r.json()["access_token"]
+    uh = {"Authorization": f"Bearer {ut}"}
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    at = r.json()["access_token"]
+    ah = {"Authorization": f"Bearer {at}"}
+    # Admin creates a complaint
+    r = await cli.post("/api/complaints", json={"subject": "Admin issue"}, headers=ah)
+    cid = r.json()["complaint"]["id"]
+    # Regular user tries to read messages
+    r = await cli.get(f"/api/complaints/{cid}/messages", headers=uh)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_complaint_other_user_close_forbidden(cli):
+    r = await cli.post("/api/auth/login", json={"username": "user", "password": "user123"})
+    ut = r.json()["access_token"]
+    uh = {"Authorization": f"Bearer {ut}"}
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    at = r.json()["access_token"]
+    ah = {"Authorization": f"Bearer {at}"}
+    r = await cli.post("/api/complaints", json={"subject": "Admin issue"}, headers=ah)
+    cid = r.json()["complaint"]["id"]
+    # Regular user tries to close
+    r = await cli.post(f"/api/complaints/{cid}/close", headers=uh)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_complaint_other_user_post_forbidden(cli):
+    r = await cli.post("/api/auth/login", json={"username": "user", "password": "user123"})
+    ut = r.json()["access_token"]
+    uh = {"Authorization": f"Bearer {ut}"}
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    at = r.json()["access_token"]
+    ah = {"Authorization": f"Bearer {at}"}
+    r = await cli.post("/api/complaints", json={"subject": "Admin issue"}, headers=ah)
+    cid = r.json()["complaint"]["id"]
+    r = await cli.post(f"/api/complaints/{cid}/messages",
+        json={"message": "spam"}, headers=uh)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_complaint_unauthorized(cli):
+    r = await cli.get("/api/complaints")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_complaint_not_found(cli):
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    t = r.json()["access_token"]
+    h = {"Authorization": f"Bearer {t}"}
+    r = await cli.get("/api/complaints/99999/messages", headers=h)
+    assert r.status_code == 404
+    r = await cli.post("/api/complaints/99999/close", headers=h)
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_complaint_closed_status_filter(cli):
+    r = await cli.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    t = r.json()["access_token"]
+    h = {"Authorization": f"Bearer {t}"}
+    r = await cli.post("/api/complaints", json={"subject": "Will close"}, headers=h)
+    cid = r.json()["complaint"]["id"]
+    await cli.post(f"/api/complaints/{cid}/close", headers=h)
+    r = await cli.get("/api/complaints?status=closed", headers=h)
+    assert r.status_code == 200
+    ids = [c["id"] for c in r.json()["complaints"]]
+    assert cid in ids
 
 
 @pytest.mark.asyncio

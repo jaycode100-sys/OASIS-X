@@ -45,6 +45,9 @@ const S = {
   logsFull: [],
   telemShowAll: false,
   logsShowAll: false,
+  weather: null,
+  unreadCount: 0,
+  _unreadPollTimer: null,
 };
 
 /* ── API Client ────────────────────────────────────────────────── */
@@ -94,13 +97,48 @@ function toast(msg, type='ok') {
   setTimeout(() => t.remove(), 4000);
 }
 
-/* ── Clock (Lagos = UTC+1) ─────────────────────────────────────── */
+/* ── Clock (city-aware, all Nigeria = WAT/UTC+1) ─────────────── */
+const CITY_TIMEZONES = {
+  Lagos: 'Africa/Lagos', Abuja: 'Africa/Lagos',
+  PortHarcourt: 'Africa/Lagos', Kano: 'Africa/Lagos',
+};
 function updateClock() {
-  const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Lagos'}));
+  const tz = CITY_TIMEZONES[S.city] || 'Africa/Lagos';
+  const now = new Date(new Date().toLocaleString('en-US',{timeZone: tz}));
   const h = String(now.getHours()).padStart(2,'0');
   const m = String(now.getMinutes()).padStart(2,'0');
   const s = String(now.getSeconds()).padStart(2,'0');
   document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  // Update label to show city name
+  const lbl = document.querySelector('#hdr-time .lbl');
+  if (lbl) lbl.textContent = S.city + ' Time';
+}
+
+/* ── Weather ──────────────────────────────────────────────────── */
+async function fetchWeather() {
+  try {
+    const d = await authFetch(`/api/weather?city=${S.city}`, {}, 10000);
+    S.weather = d;
+    const el = document.getElementById('hdr-weather');
+    if (el && !d.error) {
+      el.querySelector('.val').innerHTML = `${d.icon} ${d.temperature}${d.unit} · ${d.description}`;
+      el.title = `Humidity: ${d.humidity}% · Wind: ${d.wind_speed} km/h`;
+    }
+  } catch { /* silent */ }
+}
+
+/* ── Unread badge ─────────────────────────────────────────────── */
+async function fetchUnreadCount() {
+  try {
+    const d = await authFetch('/api/cases/unread', {}, 8000);
+    const count = d.unread || 0;
+    S.unreadCount = count;
+    const badge = document.getElementById('unread-badge');
+    if (badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'flex' : 'none';
+    }
+  } catch { /* silent */ }
 }
 
 /* ── Auth check ────────────────────────────────────────────────── */
@@ -957,6 +995,10 @@ function afterAuth() {
   setInterval(updateClock, 1000);
   checkStatus();
   setInterval(checkStatus, 15000);
+  fetchWeather();
+  setInterval(fetchWeather, 300000); // every 5 min
+  fetchUnreadCount();
+  S._unreadPollTimer = setInterval(fetchUnreadCount, 10000); // every 10s
 
   // City buttons
   document.querySelectorAll('.city-btn').forEach(b => b.addEventListener('click', () => {
@@ -964,6 +1006,8 @@ function afterAuth() {
     b.classList.add('active');
     S.city = b.dataset.city;
     document.querySelector('#hdr-city-active .val').textContent = S.city;
+    updateClock();
+    fetchWeather();
     toast(`City set to ${S.city}`,'inf');
   }));
 
@@ -1201,6 +1245,7 @@ function afterAuth() {
       S.user.profile.settings = S.user.profile.settings || {};
       S.user.profile.settings.avatar_data = webp;
       updateProfileUI();
+      logActivity('profile', 'Profile photo updated');
       toast('Photo updated!', 'ok');
     } catch (err) {
       toast('Failed to upload photo: ' + err.message, 'err');
@@ -1227,7 +1272,7 @@ function afterAuth() {
     document.getElementById('theme-switch-dropdown').checked = e.target.checked;
   });
 
-  // ── Complaint Panel ──
+  // ── Cases Panel ──
   document.getElementById('complaint-toggle').addEventListener('click', toggleComplaintPanel);
   document.getElementById('complaint-close').addEventListener('click', toggleComplaintPanel);
   document.getElementById('complaint-minimize').addEventListener('click', () => {
@@ -1241,7 +1286,7 @@ function afterAuth() {
   document.getElementById('complaint-new-btn').addEventListener('click', () => {
     document.getElementById('complaint-subject').focus();
   });
-  loadComplaints();
+  loadCasesList();
   } catch(e) { console.error('[INIT] afterAuth error:', e); }
 }
 
@@ -1428,79 +1473,114 @@ function convertToWebP(dataUrl) {
 }
 
 
-// ── Complaint Panel ────────────────────────────────────────────────
+// ── Cases Panel (messaging-app style) ─────────────────────────────
 
-let _activeComplaintId = null;
-let _complaintPollTimer = null;
+let _activeCaseId = null;
+let _casePollTimer = null;
 
 function toggleComplaintPanel() {
   const p = document.getElementById('complaint-panel');
   p.classList.remove('minimized');
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
-    loadComplaints();
+    loadCasesList();
   } else {
-    if (_complaintPollTimer) { clearInterval(_complaintPollTimer); _complaintPollTimer = null; }
+    if (_casePollTimer) { clearInterval(_casePollTimer); _casePollTimer = null; }
   }
 }
 
-async function loadComplaints() {
+async function loadCasesList() {
   try {
-    const data = await authFetch('/api/complaints');
-    const msgs = document.getElementById('complaint-msgs');
-    if (!data.complaints?.length) {
-      msgs.innerHTML = '<div class="chat-msg assistant">No complaints yet. Start a new one below.</div>';
-      _activeComplaintId = null;
-      document.getElementById('complaint-input').disabled = true;
-      document.getElementById('complaint-send').disabled = true;
+    const data = await authFetch('/api/cases', {}, 10000);
+    const list = document.getElementById('cases-list');
+    if (!data.cases?.length) {
+      list.innerHTML = '<div class="cases-empty">No conversations yet.<br>Start a new case below.</div>';
       return;
     }
-    // Show the most recent open complaint, or the latest closed
-    const active = data.complaints.find(c => c.status === 'open') || data.complaints[0];
-    _activeComplaintId = active.id;
-    document.getElementById('complaint-input').disabled = false;
-    document.getElementById('complaint-send').disabled = false;
-    await loadComplaintMessages(active.id);
-    // Start polling for new messages every 5s
-    if (_complaintPollTimer) clearInterval(_complaintPollTimer);
-    _complaintPollTimer = setInterval(() => {
-      if (_activeComplaintId) loadComplaintMessages(_activeComplaintId);
-    }, 5000);
+    list.innerHTML = data.cases.map(c => {
+      const initials = (c.user_name || '?').slice(0, 2).toUpperCase();
+      const avatarBg = c.avatar_color || '#FF9E00';
+      const timeAgo = _timeAgo(c.last_message_at || c.updated_at);
+      const preview = (c.last_message || c.subject || '').slice(0, 50);
+      const unread = c.unread_count || 0;
+      const isActive = c.id === _activeCaseId;
+      const closedBadge = c.status === 'closed' ? '<span class="case-closed-tag">Closed</span>' : '';
+      const priorityDot = c.priority === 'urgent' ? '<span class="priority-dot urgent"></span>' :
+                          c.priority === 'high' ? '<span class="priority-dot high"></span>' : '';
+      return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}">
+        <div class="case-avatar" style="background:${avatarBg}">
+          ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" />` : `<span>${initials}</span>`}
+        </div>
+        <div class="case-info">
+          <div class="case-name">${c.user_name || 'Unknown'}${priorityDot}${closedBadge}</div>
+          <div class="case-preview">${preview}${timeAgo ? ' · ' + timeAgo : ''}</div>
+        </div>
+        ${unread > 0 ? `<div class="case-unread">${unread}</div>` : ''}
+      </div>`;
+    }).join('');
   } catch(e) {
-    console.error('[COMPLAINT] Load error:', e);
+    console.error('[CASES] Load error:', e);
   }
 }
 
-async function loadComplaintMessages(complaintId) {
+async function openCase(caseId) {
+  _activeCaseId = caseId;
+  // Highlight in list
+  document.querySelectorAll('.case-item').forEach(el => {
+    el.classList.toggle('active', +el.dataset.caseId === caseId);
+  });
+  // Load messages
+  await loadCaseMessages(caseId);
+  // Show message input
+  document.getElementById('complaint-input').disabled = false;
+  document.getElementById('complaint-send').disabled = false;
+  // Mark as read
+  try { await authFetch(`/api/cases/${caseId}/read`, {method:'POST'}); } catch {}
+  fetchUnreadCount();
+  // Start polling
+  if (_casePollTimer) clearInterval(_casePollTimer);
+  _casePollTimer = setInterval(() => { if (_activeCaseId) loadCaseMessages(_activeCaseId); }, 5000);
+}
+
+async function loadCaseMessages(caseId) {
   try {
-    const data = await authFetch(`/api/complaints/${complaintId}/messages`);
+    const data = await authFetch(`/api/complaints/${caseId}/messages`, {}, 10000);
     const msgs = document.getElementById('complaint-msgs');
-    msgs.innerHTML = '';
-    const addMsg = (role, text) => {
-      const d = document.createElement('div');
-      d.className = 'chat-msg ' + role;
-      d.textContent = text;
-      msgs.appendChild(d);
-    };
+    const complaint = data.complaint || {};
+    const isClosed = complaint.status === 'closed';
+
     if (!data.messages?.length) {
-      addMsg('assistant', 'No messages yet. Send your first message to the support team.');
+      msgs.innerHTML = `<div class="chat-msg system">Case opened. Send your first message.</div>`;
     } else {
-      for (const m of data.messages) {
+      msgs.innerHTML = data.messages.map(m => {
         const isMe = m.sender_name === S.user?.username;
-        const sender = isMe ? 'You' : 'Support Agent';
-        addMsg(isMe ? 'user' : 'assistant', `${sender}: ${m.message}`);
-      }
+        const isSystem = m.message_type === 'system';
+        if (isSystem) return `<div class="chat-msg system">${m.message}</div>`;
+        const ts = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+        return `<div class="chat-msg ${isMe ? 'user' : 'assistant'}">
+          <div class="msg-sender">${isMe ? 'You' : m.sender_name}</div>
+          <div class="msg-text">${m.message}</div>
+          <div class="msg-time">${ts}</div>
+        </div>`;
+      }).join('');
     }
+
+    if (isClosed) {
+      msgs.innerHTML += `<div class="chat-msg system case-closed-msg">🔒 This case is closed${complaint.resolution_notes ? ': ' + complaint.resolution_notes : ''}</div>`;
+      document.getElementById('complaint-input').disabled = true;
+      document.getElementById('complaint-send').disabled = true;
+    }
+
     msgs.scrollTop = msgs.scrollHeight;
   } catch(e) {
-    console.error('[COMPLAINT] Load messages error:', e);
+    console.error('[CASES] Load messages error:', e);
   }
 }
 
 async function createComplaint() {
   const inp = document.getElementById('complaint-subject');
   const subject = inp.value.trim();
-  if (!subject) { toast('Enter a subject for your complaint', 'err'); return; }
+  if (!subject) { toast('Enter a subject for your case', 'err'); return; }
   try {
     const data = await authFetch('/api/complaints', {
       method: 'POST',
@@ -1508,20 +1588,21 @@ async function createComplaint() {
       body: JSON.stringify({subject})
     });
     inp.value = '';
-    toast('Complaint created!', 'ok');
-    _activeComplaintId = data.complaint.id;
+    toast('Case created!', 'ok');
+    _activeCaseId = data.complaint.id;
     document.getElementById('complaint-input').disabled = false;
     document.getElementById('complaint-send').disabled = false;
     document.getElementById('complaint-input').focus();
-    await loadComplaintMessages(_activeComplaintId);
+    await loadCasesList();
+    await loadCaseMessages(_activeCaseId);
   } catch(e) {
     toast('Failed: ' + e.message, 'err');
   }
 }
 
 async function sendComplaintMessage() {
-  if (!_activeComplaintId) {
-    toast('Create a complaint first', 'err');
+  if (!_activeCaseId) {
+    toast('Open a case first', 'err');
     return;
   }
   const inp = document.getElementById('complaint-input');
@@ -1529,41 +1610,52 @@ async function sendComplaintMessage() {
   if (!msg) return;
   inp.value = '';
   try {
-    await authFetch(`/api/complaints/${_activeComplaintId}/messages`, {
+    await authFetch(`/api/complaints/${_activeCaseId}/messages`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({message: msg})
     });
-    await loadComplaintMessages(_activeComplaintId);
+    await loadCaseMessages(_activeCaseId);
+    fetchUnreadCount();
   } catch(e) {
     toast('Failed to send: ' + e.message, 'err');
   }
 }
 
+function _timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h';
+  if (diff < 604800) return Math.floor(diff/86400) + 'd';
+  return d.toLocaleDateString();
+}
 
-// ── Activity Feed (superadmin only) ────────────────────────────────
+
+// ── Activity Feed ────────────────────────────────────────────────
 
 async function loadActivities() {
-  // Only superadmin can view activity feed
-  if (S.user?.role !== 'superadmin') {
-    document.getElementById('activity-feed').innerHTML =
-      '<div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px">Activity feed visible to superadmin only</div>';
-    document.querySelector('.section:has(.activity-feed)')?.classList.add('superadmin-only');
-    return;
-  }
+  const feed = document.getElementById('activity-feed');
+  if (!feed) return;
   try {
-    const data = await authFetch('/api/activity');
-    const feed = document.getElementById('activity-feed');
+    const isSuper = S.user?.role === 'superadmin';
+    const url = isSuper ? '/api/activity?limit=100' : '/api/activity?own=true&limit=100';
+    const data = await authFetch(url, {}, 10000);
     if (!data.activities || !data.activities.length) {
       feed.innerHTML = '<div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px">No recent activity</div>';
       return;
     }
-    const icons = { pipeline:'▶', fault:'⚠️', diagnose:'🔍', login:'🔑', system:'⚙️' };
-    const isSuper = S.user?.role === 'superadmin';
+    const icons = { pipeline:'▶', fault:'⚠️', diagnose:'🔍', login:'🔑', system:'⚙️', profile:'👤', case:'📋', notification:'📤', signup:'🆕' };
     feed.innerHTML = data.activities.map(a => {
       let extra = '';
-      if (a.type === 'login' && a.username && isSuper) {
-        extra = `<span style="font-size:10px;color:var(--txt3);display:block">device: ${a.user_agent || 'unknown'}</span>`;
+      if (a.type === 'login' && a.user_agent) {
+        extra = `<span style="font-size:10px;color:var(--txt3);display:block">device: ${a.user_agent}</span>`;
+      }
+      if (isSuper && a.username) {
+        extra += `<span style="font-size:10px;color:var(--accent);display:block">user: ${a.username}</span>`;
       }
       return `<div class="activity-item">
         <span class="activity-icon">${icons[a.type]||'📋'}</span>
@@ -1572,6 +1664,10 @@ async function loadActivities() {
       </div>`;
     }).join('');
   } catch(e) { /* silent */ }
+}
+
+function downloadActivityLog() {
+  window.open('/api/activity/download', '_blank');
 }
 
 /* ── Bootstrap ────────────────────────────────────────────────── */

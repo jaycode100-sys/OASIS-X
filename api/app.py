@@ -96,6 +96,14 @@ def dashboard():
     return JSONResponse(status_code=404, content={"detail": "index.html not found"})
 
 
+@app.get("/cases", include_in_schema=False)
+def cases_page():
+    cases = __import__("os").path.join(STATIC_DIR, "cases.html")
+    if __import__("os").path.isfile(cases):
+        return FileResponse(cases)
+    return JSONResponse(status_code=404, content={"detail": "cases.html not found"})
+
+
 # ── Startup ──
 @app.on_event("startup")
 def startup():
