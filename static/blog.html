@@ -144,7 +144,8 @@
       if (_sessionTimer) clearTimeout(_sessionTimer);
       _sessionTimer = setTimeout(() => {
         localStorage.removeItem('token');
-        window.location.href = '/static/login.html';
+        localStorage.setItem('_session_msg', 'Your session has expired. Please log in again.');
+        window.location.href = '/';
       }, 3 * 60 * 1000);
     }
     ['click','keydown','mousemove','touchstart'].forEach(evt => {

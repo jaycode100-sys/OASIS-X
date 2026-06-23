@@ -68,6 +68,53 @@
 /* Hide FAB when complaint panel is open */
 .fab-messages.panel-open { opacity: 0; pointer-events: none; transform: scale(0.5); }
 
+/* ── Nexus Chat Widget ─────────────────────────────────────── */
+.nexus-chat-widget { position: fixed; bottom: 96px; right: 28px; z-index: 499; }
+.nexus-fab {
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  cursor: pointer; overflow: hidden; padding: 0;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4), 0 0 0 3px rgba(59,130,246,.15);
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  background: #1a3a5c;
+}
+.nexus-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.nexus-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,0,0,.5), 0 0 0 5px rgba(59,130,246,.2); }
+.nexus-fab:active { transform: scale(.95); }
+
+.nexus-chat-popup {
+  position: absolute; bottom: 68px; right: 0;
+  width: 320px; border-radius: 16px; overflow: hidden;
+  background: #fff; color: #1a1a1a;
+  box-shadow: 0 12px 48px rgba(0,0,0,.3);
+  animation: nexusPopupIn .3s cubic-bezier(.4,0,.2,1);
+}
+@keyframes nexusPopupIn { from { opacity: 0; transform: translateY(12px) scale(.95); } to { opacity: 1; transform: none; } }
+
+.nexus-popup-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; background: #2563eb; color: #fff;
+}
+.nexus-popup-avatars { display: flex; }
+.nexus-popup-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); object-fit: cover; }
+.nexus-popup-info { flex: 1; }
+.nexus-popup-name { font-size: 14px; font-weight: 700; }
+.nexus-popup-status { font-size: 11px; opacity: .8; }
+.nexus-popup-close {
+  background: none; border: none; color: #fff; font-size: 18px;
+  cursor: pointer; padding: 4px; border-radius: 6px; transition: background .2s;
+}
+.nexus-popup-close:hover { background: rgba(255,255,255,.15); }
+
+.nexus-popup-body { padding: 16px; min-height: 120px; }
+.nexus-popup-msg { display: flex; gap: 8px; align-items: flex-start; }
+.nexus-msg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.nexus-msg-bubble {
+  background: #f0f2f5; border-radius: 12px; border-bottom-left-radius: 4px;
+  padding: 10px 14px; font-size: 13px; color: #1a1a1a; line-height: 1.4;
+}
+
+[data-theme="light"] .nexus-fab { box-shadow: 0 4px 20px rgba(0,0,0,.15), 0 0 0 3px rgba(59,130,246,.1); }
+
 /* ── Reset ────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }

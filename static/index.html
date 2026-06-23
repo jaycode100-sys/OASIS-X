@@ -38,7 +38,6 @@
     <div class="status-pill llm" id="llm-status">
       <span class="llm-icon">🧠</span><span id="llm-status-text">LLM —</span>
     </div>
-    <button class="chat-toggle" id="chat-toggle" title="Chat with Nexus">💬</button>
     <div class="profile-trigger" id="profile-trigger">
       <div class="profile-trigger-avatar" id="trigger-avatar">?</div>
       <span class="profile-greeting" id="profile-greeting">Hi, user</span>
@@ -160,25 +159,6 @@
 
     <div class="sidebar-divider"></div>
 
-    <div class="sidebar-section">
-      <p class="sidebar-label">Simulation</p>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
-        <span style="font-size:12px;color:var(--txt2);">Real Fibre Lines</span>
-        <label class="sim-toggle" title="Toggle real fibre line simulation">
-          <input type="checkbox" id="sim-toggle" />
-          <span class="sim-toggle-slider"></span>
-        </label>
-      </div>
-      <div id="sim-coming-soon" style="display:none;text-align:center;padding:12px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;margin-top:8px;">
-        <div style="font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;animation:comingSoonPulse 2s ease-in-out infinite;">Feature Coming Soon</div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:4px;">Real fibre line monitoring will be available in the next release</div>
-      </div>
-      <div style="margin-top:8px;">
-        <button class="run-btn" id="auto-btn" style="font-size:12px;padding:8px;" title="Auto">
-          <span class="run-icon">⚡</span> Auto
-        </button>
-      </div>
-    </div>
   </aside>
 
   <!-- MAIN -->
@@ -528,6 +508,20 @@
               <div style="color:var(--txt3);font-size:12px">Loading...</div>
             </div>
           </div>
+          <div class="profile-section">
+            <div class="profile-section-title">Simulation</div>
+            <div class="profile-row">
+              <span>Real Fibre Lines</span>
+              <label class="sim-toggle" title="Toggle real fibre line simulation">
+                <input type="checkbox" id="sim-toggle" />
+                <span class="sim-toggle-slider"></span>
+              </label>
+            </div>
+            <div id="sim-coming-soon" style="display:none;text-align:center;padding:12px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;margin-top:8px;">
+              <div style="font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;animation:comingSoonPulse 2s ease-in-out infinite;">Feature Coming Soon</div>
+              <div style="font-size:10px;color:var(--txt3);margin-top:4px;">Real fibre line monitoring will be available in the next release</div>
+            </div>
+          </div>
           <button class="profile-save-btn" id="profile-save-btn">Save Changes</button>
         </div>
       </div>
@@ -648,6 +642,31 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
     </div>
   </div>
 </footer>
+
+<!-- FLOATING NEXUS CHAT WIDGET -->
+<div class="nexus-chat-widget" id="nexus-chat-widget">
+  <div class="nexus-chat-popup" id="nexus-chat-popup" style="display:none">
+    <div class="nexus-popup-header">
+      <div class="nexus-popup-avatars">
+        <img src="/static/nexus.jpg" alt="Nexus" class="nexus-popup-avatar" />
+      </div>
+      <div class="nexus-popup-info">
+        <div class="nexus-popup-name">Nexus AI</div>
+        <div class="nexus-popup-status">Always available</div>
+      </div>
+      <button class="nexus-popup-close" id="nexus-popup-close">✕</button>
+    </div>
+    <div class="nexus-popup-body">
+      <div class="nexus-popup-msg">
+        <img src="/static/nexus.jpg" alt="" class="nexus-msg-avatar" />
+        <div class="nexus-msg-bubble">Have a question? Chat with us!</div>
+      </div>
+    </div>
+  </div>
+  <button class="nexus-fab" id="nexus-fab" title="Chat with Nexus AI">
+    <img src="/static/nexus.jpg" alt="Nexus" />
+  </button>
+</div>
 
 <!-- FLOATING MESSAGES BUTTON -->
 <button class="fab-messages" id="complaint-toggle" title="Messages">

@@ -164,7 +164,8 @@ function startSessionTimer() {
   if (_sessionTimer) clearTimeout(_sessionTimer);
   _sessionTimer = setTimeout(() => {
     setToken(null);
-    window.location.href = '/static/login.html';
+    localStorage.setItem('_session_msg', 'Your session has expired. Please log in again.');
+    window.location.href = '/';
   }, 3 * 60 * 1000); // 3 minutes
 }
 /* Reset timer on any user activity */
@@ -1084,13 +1085,7 @@ function afterAuth() {
     });
   }
 
-  // Auto button
-  const autoBtn = document.getElementById('auto-btn');
-  if (autoBtn) {
-    autoBtn.addEventListener('click', () => {
-      toast('Auto mode: Pipeline will run automatically every 30 seconds', 'inf');
-    });
-  }
+  // Auto button removed — feature coming soon handled via profile settings
 
   // Export
   document.getElementById('export-btn').addEventListener('click', exportCSV);
@@ -1153,7 +1148,12 @@ function afterAuth() {
   document.getElementById('sidebar-close-btn').addEventListener('click', toggleSidebar);
 
   // Chat toggle, minimize & send
-  document.getElementById('chat-toggle').addEventListener('click', toggleChat);
+  // Nexus chat widget
+  const nexusFab = document.getElementById('nexus-fab');
+  const nexusPopup = document.getElementById('nexus-chat-popup');
+  const nexusClose = document.getElementById('nexus-popup-close');
+  if (nexusFab) nexusFab.addEventListener('click', () => { nexusPopup.style.display = nexusPopup.style.display === 'none' ? 'block' : 'none'; });
+  if (nexusClose) nexusClose.addEventListener('click', () => { nexusPopup.style.display = 'none'; });
   document.getElementById('chat-close').addEventListener('click', toggleChat);
   document.getElementById('chat-minimize').addEventListener('click', minimizeChat);
   document.getElementById('chat-send').addEventListener('click', doChat);

@@ -3,200 +3,950 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OASIS-X — Autonomous Fibre Fault Healing System</title>
+  <title>OASIS-X — The Self-Healing Nervous System for Dark Fibre</title>
   <meta name="description" content="Real-time autonomous optical fibre network monitoring and fault healing for Nigerian networks" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/static/oasis.png" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     :root {
-      --bg: #060f1a; --bg2: #0b1a2e; --bg3: #10233d;
-      --border: #1a3450; --txt: #e0edf8; --txt2: #7090b0; --txt3: #3d5a7a;
-      --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
-      --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --bg: #030a12;
+      --bg2: #081420;
+      --accent: #00ff88;
+      --blue: #3b82f6;
+      --cyan: #22d3ee;
+      --purple: #a855f7;
+      --txt: #e8f0f8;
+      --txt2: #6b8aa8;
+      --border: rgba(255,255,255,0.06);
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
+
     html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--txt); font-family: var(--font); overflow-x: hidden; }
-    
-    /* ── Water-like background ── */
-    .bg-shapes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-    .bg-shapes .shape {
-      position: absolute; border-radius: 50%; opacity: 0.15;
-      background: var(--bg2); border: 1px solid var(--border);
+
+    body {
+      background: var(--bg);
+      color: var(--txt);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      line-height: 1.6;
     }
-    .shape-1 {
-      width: 600px; height: 600px; top: -15%; left: -10%;
-      animation: drift1 25s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 30% 30%, var(--bg3), transparent);
-      border-radius: 42% 58% 65% 35% / 48% 52% 48% 52%;
+
+    /* ── Canvas background ── */
+    #fibreCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
     }
-    .shape-2 {
-      width: 450px; height: 450px; bottom: -15%; right: -8%;
-      animation: drift2 30s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 70% 70%, var(--bg3), transparent);
-      border-radius: 55% 45% 38% 62% / 52% 58% 42% 48%;
+
+    /* ── Animated grid ── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridDrift 20s linear infinite;
     }
-    .shape-3 {
-      width: 300px; height: 300px; top: 50%; left: 10%;
-      animation: drift3 22s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 50% 50%, var(--border), transparent);
-      border-radius: 62% 38% 48% 52% / 38% 55% 45% 62%;
-      opacity: 0.08;
+
+    @keyframes gridDrift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(60px, 60px); }
     }
-    @keyframes drift1 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-      50%  { transform: translate(40px, 30px) rotate(8deg) scale(1.03); }
-      100% { transform: translate(80px, 50px) rotate(15deg) scale(1.06); }
+
+    /* ── Glowing orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(100px);
+      opacity: 0.12;
     }
-    @keyframes drift2 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-      50%  { transform: translate(-35px, -25px) rotate(-6deg) scale(1.04); }
-      100% { transform: translate(-70px, -50px) rotate(-12deg) scale(1.08); }
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: var(--accent);
+      top: -200px; left: -100px;
+      animation: orbFloat1 18s ease-in-out infinite alternate;
     }
-    @keyframes drift3 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-      50%  { transform: translate(25px, -15px) rotate(10deg) scale(1.05); }
-      100% { transform: translate(50px, -30px) rotate(20deg) scale(1.1); }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: var(--blue);
+      bottom: -150px; right: -100px;
+      animation: orbFloat2 22s ease-in-out infinite alternate;
+    }
+    .orb-3 {
+      width: 400px; height: 400px;
+      background: var(--purple);
+      top: 40%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: orbFloat3 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbFloat1 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(80px, 60px) scale(1.1); }
+    }
+    @keyframes orbFloat2 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(-60px, -80px) scale(1.15); }
+    }
+    @keyframes orbFloat3 {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-40%, -60%) scale(1.2); }
     }
 
     /* ── Header ── */
     .header {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px; height: 70px;
-      background: rgba(6,15,26,0.9); backdrop-filter: blur(12px);
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 72px;
+      background: rgba(3, 10, 18, 0.7);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
       border-bottom: 1px solid var(--border);
     }
-    .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-    .header-logo img { width: 36px; height: 36px; }
-    .header-logo-text { font-size: 18px; font-weight: 800; color: var(--accent); }
-    .header-nav { display: flex; align-items: center; gap: 24px; }
-    .header-nav a { color: var(--txt2); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
-    .header-nav a:hover { color: var(--txt); }
-    .header-actions { display: flex; align-items: center; gap: 12px; }
-    .btn {
-      padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;
-      cursor: pointer; text-decoration: none; transition: all 0.2s; border: none;
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
     }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--txt2); }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-primary { background: var(--accent); color: #060f1a; }
-    .btn-primary:hover { opacity: 0.85; box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+
+    .header-logo img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .header-logo-text {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .header-nav a {
+      color: var(--txt2);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.25s;
+      position: relative;
+    }
+
+    .header-nav a:hover {
+      color: var(--txt);
+    }
+
+    .header-nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: width 0.25s;
+    }
+
+    .header-nav a:hover::after {
+      width: 100%;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s;
+      border: none;
+      font-family: var(--font-body);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--txt2);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.15);
+      color: var(--txt);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #030a12;
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.3), 0 4px 16px rgba(0, 255, 136, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-lg {
+      padding: 16px 36px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    .btn-outline-lg {
+      background: transparent;
+      color: var(--txt);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 16px 36px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    .btn-outline-lg:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0, 255, 136, 0.05);
+    }
 
     /* ── Hero ── */
     .hero {
-      position: relative; z-index: 1;
-      min-height: 100vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center;
-      padding: 120px 24px 80px;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 140px 24px 80px;
     }
+
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 16px; border-radius: 20px;
-      background: var(--accent-dim); border: 1px solid rgba(0,255,136,0.2);
-      font-size: 12px; font-weight: 600; color: var(--accent);
-      margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 100px;
+      background: rgba(0, 255, 136, 0.06);
+      border: 1px solid rgba(0, 255, 136, 0.15);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 32px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.3px;
     }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+    }
+
     .hero-title {
-      font-size: clamp(36px, 6vw, 72px); font-weight: 800;
-      line-height: 1.1; margin-bottom: 24px;
-      background: linear-gradient(135deg, var(--txt) 0%, var(--accent) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-family: var(--font-display);
+      font-size: clamp(40px, 6vw, 80px);
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 28px;
+      max-width: 900px;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--txt) 0%, var(--accent) 50%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+
     .hero-subtitle {
-      font-size: 18px; color: var(--txt2); max-width: 600px;
-      line-height: 1.6; margin-bottom: 40px;
+      font-size: 18px;
+      color: var(--txt2);
+      max-width: 620px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+      font-weight: 400;
     }
-    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-    .hero-actions .btn { padding: 14px 32px; font-size: 16px; }
+
+    /* ── Terminal typing ── */
+    .terminal-wrapper {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 44px;
+      background: rgba(8, 20, 32, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--accent);
+      backdrop-filter: blur(8px);
+      min-width: 420px;
+      max-width: 90vw;
+    }
+
+    .terminal-prompt {
+      color: var(--txt2);
+      margin-right: 10px;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .terminal-text {
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid var(--accent);
+      animation: blink-caret 0.75s step-end infinite;
+    }
+
+    @keyframes blink-caret {
+      from, to { border-color: var(--accent); }
+      50% { border-color: transparent; }
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 56px;
+    }
+
+    /* ── Proof badges ── */
+    .proof-badges {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .proof-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--txt2);
+      font-weight: 500;
+    }
+
+    .proof-badge-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .proof-badge-icon.green { background: var(--accent); }
+    .proof-badge-icon.blue { background: var(--blue); }
+    .proof-badge-icon.cyan { background: var(--cyan); }
+    .proof-badge-icon.purple { background: var(--purple); }
+
+    /* ── How It Works ── */
+    .how-it-works {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 72px;
+      letter-spacing: -1px;
+      color: var(--txt);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: start;
+      gap: 0;
+    }
+
+    .step {
+      text-align: center;
+      padding: 0 16px;
+    }
+
+    .step-number {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: rgba(0, 255, 136, 0.08);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      transition: all 0.3s;
+    }
+
+    .step:hover .step-number {
+      background: rgba(0, 255, 136, 0.15);
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.15);
+      transform: scale(1.05);
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--txt);
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--txt2);
+      line-height: 1.7;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+
+    .step-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 24px;
+      color: var(--accent);
+      font-size: 20px;
+      opacity: 0.4;
+    }
+
+    .step-connector-line {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      position: relative;
+    }
+
+    .step-connector-line::before {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      top: -2px;
+      animation: flowDot 2s linear infinite;
+    }
+
+    @keyframes flowDot {
+      0% { left: 0; opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
 
     /* ── Features ── */
     .features {
-      position: relative; z-index: 1;
-      padding: 80px 24px; max-width: 1200px; margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    .features-title {
-      text-align: center; font-size: 14px; font-weight: 700;
-      color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
-      margin-bottom: 16px;
-    }
-    .features-heading {
-      text-align: center; font-size: 32px; font-weight: 800;
-      color: var(--txt); margin-bottom: 48px;
-    }
+
     .features-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
     }
+
     .feature-card {
-      background: rgba(11,26,46,0.6); backdrop-filter: blur(8px);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 32px; transition: all 0.3s;
+      background: rgba(8, 20, 32, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 28px;
+      transition: all 0.35s ease;
+      position: relative;
+      overflow: hidden;
     }
-    .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    .feature-icon { font-size: 40px; margin-bottom: 16px; }
-    .feature-title { font-size: 18px; font-weight: 700; color: var(--txt); margin-bottom: 8px; }
-    .feature-desc { font-size: 14px; color: var(--txt2); line-height: 1.6; }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.35s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(0, 255, 136, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      font-size: 36px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--txt);
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--txt2);
+      line-height: 1.7;
+    }
+
+    /* ── Network Visual ── */
+    .network-visual {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .network-container {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      background: rgba(8, 20, 32, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .network-container canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .net-node {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+      z-index: 2;
+      animation: nodeGlow 3s ease-in-out infinite;
+    }
+
+    .net-node.blue {
+      background: var(--blue);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .net-node.purple {
+      background: var(--purple);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .net-node.cyan {
+      background: var(--cyan);
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+    }
+
+    .net-node-label {
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--txt2);
+      white-space: nowrap;
+      background: rgba(3, 10, 18, 0.8);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    @keyframes nodeGlow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+    }
+
+    .net-line {
+      position: absolute;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(0,255,136,0.3), rgba(0,255,136,0.05));
+      z-index: 1;
+      transform-origin: left center;
+    }
+
+    .net-packet {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      z-index: 3;
+    }
 
     /* ── Stats ── */
     .stats {
-      position: relative; z-index: 1;
-      padding: 80px 24px; max-width: 1000px; margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
     }
-    .stats-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      padding: 40px 48px;
+      background: rgba(8, 20, 32, 0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--txt2);
+      font-weight: 500;
+    }
+
+    .stat-item-group {
       text-align: center;
     }
-    .stat-value { font-size: 36px; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
-    .stat-label { font-size: 13px; color: var(--txt2); margin-top: 4px; }
 
     /* ── Footer ── */
     .footer {
-      position: relative; z-index: 1;
-      padding: 40px 24px; text-align: center;
+      position: relative;
+      z-index: 1;
+      padding: 60px 24px 40px;
       border-top: 1px solid var(--border);
-      font-size: 12px; color: var(--txt3);
     }
-    .footer a { color: var(--accent); text-decoration: none; }
 
-    @media (max-width: 768px) {
-      .header { padding: 0 16px; height: 60px; }
-      .header-nav { display: none; }
-      .header-actions .btn-outline { display: none; }
-      .hero { padding: 90px 16px 60px; }
-      .hero-badge { font-size: 11px; padding: 5px 12px; }
-      .hero-subtitle { font-size: 15px; }
-      .hero-actions { flex-direction: column; width: 100%; }
-      .hero-actions .btn { width: 100%; text-align: center; }
-      .features { padding: 50px 16px; }
-      .features-heading { font-size: 24px; }
-      .features-grid { grid-template-columns: 1fr; gap: 16px; }
-      .feature-card { padding: 24px; }
-      .stats { padding: 50px 16px; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-      .stat-value { font-size: 28px; }
-      .stat-label { font-size: 11px; }
-      .footer { font-size: 11px; padding: 24px 16px; }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 40px;
     }
+
+    .footer-brand {
+      max-width: 320px;
+    }
+
+    .footer-brand-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .footer-brand-tagline {
+      font-size: 14px;
+      color: var(--txt2);
+      line-height: 1.6;
+    }
+
+    .footer-links-group {
+      display: flex;
+      gap: 64px;
+    }
+
+    .footer-col-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--txt);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .footer-col a {
+      display: block;
+      color: var(--txt2);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 4px 0;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: var(--accent);
+    }
+
+    .footer-bottom {
+      max-width: 1100px;
+      margin: 40px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--txt2);
+    }
+
+    .footer-bottom a {
+      color: var(--txt2);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-bottom a:hover {
+      color: var(--accent);
+    }
+
+    /* ── Responsive 768px ── */
+    @media (max-width: 768px) {
+      .header {
+        padding: 0 20px;
+        height: 64px;
+      }
+
+      .header-nav {
+        display: none;
+      }
+
+      .header-actions .btn-ghost {
+        display: none;
+      }
+
+      .hero {
+        padding: 120px 20px 60px;
+      }
+
+      .hero-title {
+        letter-spacing: -1px;
+      }
+
+      .terminal-wrapper {
+        min-width: unset;
+        width: 100%;
+        font-size: 12px;
+        padding: 8px 14px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .hero-actions .btn-lg,
+      .hero-actions .btn-outline-lg {
+        width: 100%;
+      }
+
+      .proof-badges {
+        gap: 16px;
+      }
+
+      .how-it-works {
+        padding: 80px 20px;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .step-connector {
+        display: none;
+      }
+
+      .features {
+        padding: 80px 20px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .network-visual {
+        padding: 80px 20px;
+      }
+
+      .network-container {
+        height: 280px;
+      }
+
+      .stats {
+        padding: 60px 20px;
+      }
+
+      .stats-bar {
+        flex-direction: column;
+        gap: 24px;
+        padding: 32px 24px;
+      }
+
+      .stat-divider {
+        width: 80px;
+        height: 1px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+      }
+
+      .footer-links-group {
+        gap: 32px;
+        flex-wrap: wrap;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+    }
+
+    /* ── Responsive 480px ── */
     @media (max-width: 480px) {
-      .header-logo-text { font-size: 15px; }
-      .hero-title { font-size: 28px; }
-      .hero-subtitle { font-size: 14px; }
-      .hero-actions .btn { padding: 12px 24px; font-size: 14px; }
-      .feature-icon { font-size: 32px; }
-      .feature-title { font-size: 16px; }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .header-logo-text {
+        font-size: 17px;
+      }
+
+      .hero-title {
+        font-size: 32px;
+        letter-spacing: -0.5px;
+      }
+
+      .hero-subtitle {
+        font-size: 15px;
+      }
+
+      .terminal-wrapper {
+        font-size: 11px;
+      }
+
+      .section-title {
+        font-size: 26px;
+      }
+
+      .step-number {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+
+      .step-title {
+        font-size: 18px;
+      }
+
+      .feature-card {
+        padding: 28px 22px;
+      }
+
+      .feature-icon {
+        font-size: 30px;
+      }
+
+      .feature-title {
+        font-size: 16px;
+      }
+
+      .stat-value {
+        font-size: 22px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="bg-shapes">
-    <div class="shape shape-1"></div>
-    <div class="shape shape-2"></div>
-    <div class="shape shape-3"></div>
-  </div>
+  <canvas id="fibreCanvas"></canvas>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
 
   <header class="header">
     <a href="/" class="header-logo">
@@ -205,89 +955,459 @@
     </a>
     <nav class="header-nav">
       <a href="#features">Features</a>
-      <a href="#stats">Impact</a>
-      <a href="mailto:joshuaolorundami@mtu.edu.ng">Contact</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#contact">Contact</a>
     </nav>
     <div class="header-actions">
-      <a href="/static/login.html" class="btn btn-outline">Sign In</a>
+      <a href="/static/login.html" class="btn btn-ghost">Sign In</a>
       <a href="/static/signup.html" class="btn btn-primary">Get Started</a>
     </div>
   </header>
 
   <section class="hero">
-    <div class="hero-badge">⚡ Autonomous Network Healing</div>
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      System Online — Monitoring Active
+    </div>
     <h1 class="hero-title">The Self-Healing Nervous System for Dark Fibre</h1>
     <p class="hero-subtitle">
-      OASIS-X monitors Nigerian optical fibre networks in real-time, detects faults before they cascade,
-      and autonomously initiates healing protocols — powered by AI and NCC QoS compliance standards.
+      AI-powered monitoring that detects faults before they cascade, diagnoses root causes in real-time,
+      and autonomously heals Nigerian optical fibre networks — 24/7.
     </p>
+    <div class="terminal-wrapper">
+      <span class="terminal-prompt">oasis-x:~$</span>
+      <span class="terminal-text" id="typingText"></span>
+    </div>
     <div class="hero-actions">
-      <a href="/static/signup.html" class="btn btn-primary">Start Monitoring Free</a>
-      <a href="#features" class="btn btn-outline">Learn More</a>
+      <a href="/static/signup.html" class="btn btn-primary btn-lg">Get Started</a>
+      <a href="#how-it-works" class="btn btn-outline-lg">Learn More</a>
+    </div>
+    <div class="proof-badges">
+      <span class="proof-badge"><span class="proof-badge-icon green"></span> 4 Cities</span>
+      <span class="proof-badge"><span class="proof-badge-icon blue"></span> NCC Compliant</span>
+      <span class="proof-badge"><span class="proof-badge-icon cyan"></span> 24/7 AI</span>
+      <span class="proof-badge"><span class="proof-badge-icon purple"></span> 5 Fault Types</span>
+    </div>
+  </section>
+
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-label">// How It Works</div>
+    <h2 class="section-title">Detect. Diagnose. Heal.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">01</div>
+        <h3 class="step-title">Detect</h3>
+        <p class="step-desc">Continuous OSNR, BER, and latency monitoring across every fibre segment. Anomalies are flagged in milliseconds.</p>
+      </div>
+      <div class="step-connector">
+        <div class="step-connector-line"></div>
+      </div>
+      <div class="step">
+        <div class="step-number">02</div>
+        <h3 class="step-title">Diagnose</h3>
+        <p class="step-desc">LLM-powered root cause analysis classifies fault type, urgency, and recommends the optimal healing protocol.</p>
+      </div>
+      <div class="step-connector">
+        <div class="step-connector-line"></div>
+      </div>
+      <div class="step">
+        <div class="step-number">03</div>
+        <h3 class="step-title">Heal</h3>
+        <p class="step-desc">Autonomous decision engine triggers corrective actions — rerouting traffic, adjusting power levels, or dispatching field crews.</p>
+      </div>
     </div>
   </section>
 
   <section class="features" id="features">
-    <div class="features-title">Capabilities</div>
-    <h2 class="features-heading">Built for Nigerian Networks</h2>
+    <div class="section-label">// Capabilities</div>
+    <h2 class="section-title">Built for Nigerian Networks</h2>
     <div class="features-grid">
       <div class="feature-card">
-        <div class="feature-icon">📡</div>
-        <div class="feature-title">Real-Time Monitoring</div>
-        <div class="feature-desc">Continuous OSNR, BER, and latency tracking across Lagos, Abuja, Port Harcourt, and Kano with NCC QoS baseline comparison.</div>
+        <span class="feature-icon">📡</span>
+        <h3 class="feature-title">Real-Time Monitoring</h3>
+        <p class="feature-desc">Continuous OSNR, BER, and latency tracking across Lagos, Abuja, Port Harcourt, and Kano with NCC QoS baseline comparison.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🤖</div>
-        <div class="feature-title">AI Fault Diagnosis</div>
-        <div class="feature-desc">LLM-powered root cause analysis with confidence scoring, urgency classification, and actionable repair recommendations.</div>
+        <span class="feature-icon">🤖</span>
+        <h3 class="feature-title">AI Fault Diagnosis</h3>
+        <p class="feature-desc">LLM-powered root cause analysis with confidence scoring, urgency classification, and actionable repair recommendations.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🔄</div>
-        <div class="feature-title">Autonomous Healing</div>
-        <div class="feature-desc">Decision engine maps network states to corrective actions — automatically escalating from DEGRADING to CRITICAL responses.</div>
+        <span class="feature-icon">🔄</span>
+        <h3 class="feature-title">Autonomous Healing</h3>
+        <p class="feature-desc">Decision engine maps network states to corrective actions — automatically escalating from DEGRADING to CRITICAL responses.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🌪️</div>
-        <div class="feature-title">Environmental Modeling</div>
-        <div class="feature-desc">Simulates harmattan dust, rain attenuation, generator failures, and peak congestion patterns specific to Nigerian conditions.</div>
+        <span class="feature-icon">🌪️</span>
+        <h3 class="feature-title">Environmental Modeling</h3>
+        <p class="feature-desc">Simulates harmattan dust, rain attenuation, generator failures, and peak congestion patterns specific to Nigerian conditions.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <div class="feature-title">NCC Compliance</div>
-        <div class="feature-desc">Automated compliance reporting against Nigerian Communications Commission Quality of Service standards for ISPs.</div>
+        <span class="feature-icon">📊</span>
+        <h3 class="feature-title">NCC Compliance</h3>
+        <p class="feature-desc">Automated compliance reporting against Nigerian Communications Commission Quality of Service standards for ISPs.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🗺️</div>
-        <div class="feature-title">Digital Twin</div>
-        <div class="feature-desc">Live network topology visualization showing cable routes, node health, and active fault propagation across the infrastructure.</div>
+        <span class="feature-icon">🗺️</span>
+        <h3 class="feature-title">Digital Twin</h3>
+        <p class="feature-desc">Live network topology visualization showing cable routes, node health, and active fault propagation across the infrastructure.</p>
       </div>
+    </div>
+  </section>
+
+  <section class="network-visual">
+    <div class="section-label">// Network Topology</div>
+    <h2 class="section-title">Live Network Map</h2>
+    <div class="network-container" id="networkContainer">
+      <canvas id="networkCanvas"></canvas>
     </div>
   </section>
 
   <section class="stats" id="stats">
-    <div class="stats-grid">
-      <div>
+    <div class="stats-bar">
+      <div class="stat-item-group">
         <div class="stat-value">4</div>
-        <div class="stat-label">Nigerian Cities Covered</div>
+        <div class="stat-label">Cities</div>
       </div>
-      <div>
+      <div class="stat-divider"></div>
+      <div class="stat-item-group">
         <div class="stat-value">5</div>
-        <div class="stat-label">Fault Types Modeled</div>
+        <div class="stat-label">Fault Types</div>
       </div>
-      <div>
+      <div class="stat-divider"></div>
+      <div class="stat-item-group">
         <div class="stat-value">NCC</div>
-        <div class="stat-label">QoS Compliance Ready</div>
+        <div class="stat-label">Ready</div>
       </div>
-      <div>
+      <div class="stat-divider"></div>
+      <div class="stat-item-group">
         <div class="stat-value">24/7</div>
-        <div class="stat-label">Autonomous Monitoring</div>
+        <div class="stat-label">Autonomous</div>
       </div>
     </div>
   </section>
 
-  <footer class="footer">
-    <p>OASIS-X Autonomous Fibre Fault Healing System &mdash; powered by <a href="#">Swift Solutions</a></p>
-    <p style="margin-top:8px">Mountain Top University, Km. 12, Lagos-Ibadan Expressway, Ogun State</p>
+  <footer class="footer" id="contact">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-brand-name">OASIS-X</div>
+        <p class="footer-brand-tagline">The autonomous nervous system for dark fibre infrastructure. Built for Nigerian networks. Powered by AI.</p>
+      </div>
+      <div class="footer-links-group">
+        <div class="footer-col">
+          <div class="footer-col-title">Product</div>
+          <a href="#features">Features</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#stats">Impact</a>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Account</div>
+          <a href="/static/login.html">Sign In</a>
+          <a href="/static/signup.html">Get Started</a>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Contact</div>
+          <a href="mailto:joshuaolorundami@mtu.edu.ng">joshuaolorundami@mtu.edu.ng</a>
+          <a href="#">Mountain Top University</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 OASIS-X by Swift Solutions. All rights reserved.</span>
+      <span>Mountain Top University, Km. 12, Lagos-Ibadan Expressway, Ogun State</span>
+    </div>
   </footer>
+
+  <script>
+    // ── Typing animation ──
+    (function () {
+      const phrases = [
+        'Monitoring Lagos fibre networks...',
+        'Detecting fault in Abuja backbone...',
+        'Healing Port Harcourt ring...',
+        'Analyzing Kano spectral data...',
+        'Optimizing OSNR across 4 cities...'
+      ];
+      const el = document.getElementById('typingText');
+      let phraseIdx = 0;
+      let charIdx = 0;
+      let deleting = false;
+      let speed = 50;
+
+      function tick() {
+        const current = phrases[phraseIdx];
+        if (!deleting) {
+          el.textContent = current.substring(0, charIdx + 1);
+          charIdx++;
+          if (charIdx === current.length) {
+            deleting = true;
+            speed = 1800;
+          } else {
+            speed = 40 + Math.random() * 40;
+          }
+        } else {
+          el.textContent = current.substring(0, charIdx - 1);
+          charIdx--;
+          if (charIdx === 0) {
+            deleting = false;
+            phraseIdx = (phraseIdx + 1) % phrases.length;
+            speed = 400;
+          } else {
+            speed = 25;
+          }
+        }
+        setTimeout(tick, speed);
+      }
+      tick();
+    })();
+
+    // ── Fibre canvas animation ──
+    (function () {
+      const canvas = document.getElementById('fibreCanvas');
+      const ctx = canvas.getContext('2d');
+      let W, H;
+
+      function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const pathCount = 6;
+      const paths = [];
+      for (let i = 0; i < pathCount; i++) {
+        const startX = Math.random() * W;
+        const startY = Math.random() * H;
+        const cp1x = Math.random() * W;
+        const cp1y = Math.random() * H;
+        const cp2x = Math.random() * W;
+        const cp2y = Math.random() * H;
+        const endX = Math.random() * W;
+        const endY = Math.random() * H;
+        paths.push({ startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY });
+      }
+
+      const particles = [];
+      const particleCount = 40;
+
+      function spawnParticle() {
+        const pathIdx = Math.floor(Math.random() * paths.length);
+        particles.push({
+          t: 0,
+          speed: 0.002 + Math.random() * 0.004,
+          path: paths[pathIdx],
+          size: 1 + Math.random() * 2,
+          alpha: 0.3 + Math.random() * 0.5
+        });
+      }
+
+      for (let i = 0; i < particleCount; i++) {
+        spawnParticle();
+        particles[i].t = Math.random();
+      }
+
+      function getPointOnCubic(p, t) {
+        const u = 1 - t;
+        const x = u*u*u*p.startX + 3*u*u*t*p.cp1x + 3*u*t*t*p.cp2x + t*t*t*p.endX;
+        const y = u*u*u*p.startY + 3*u*u*t*p.cp1y + 3*u*t*t*p.cp2y + t*t*t*p.endY;
+        return { x, y };
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Draw faint paths
+        ctx.globalAlpha = 0.03;
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < paths.length; i++) {
+          const p = paths[i];
+          ctx.beginPath();
+          ctx.moveTo(p.startX, p.startY);
+          ctx.bezierCurveTo(p.cp1x, p.cp1y, p.cp2x, p.cp2y, p.endX, p.endY);
+          ctx.stroke();
+        }
+
+        // Draw and update particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.t += p.speed;
+          if (p.t > 1) {
+            particles.splice(i, 1);
+            spawnParticle();
+            continue;
+          }
+          const pt = getPointOnCubic(p.path, p.t);
+          ctx.globalAlpha = p.alpha * (1 - p.t);
+          ctx.fillStyle = '#00ff88';
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      }
+      draw();
+
+      // Regenerate paths periodically
+      setInterval(function () {
+        for (let i = 0; i < pathCount; i++) {
+          if (Math.random() > 0.7) {
+            paths[i] = {
+              startX: Math.random() * W,
+              startY: Math.random() * H,
+              cp1x: Math.random() * W,
+              cp1y: Math.random() * H,
+              cp2x: Math.random() * W,
+              cp2y: Math.random() * H,
+              endX: Math.random() * W,
+              endY: Math.random() * H
+            };
+          }
+        }
+      }, 8000);
+    })();
+
+    // ── Network topology animation ──
+    (function () {
+      const container = document.getElementById('networkContainer');
+      const canvas = document.getElementById('networkCanvas');
+      const ctx = canvas.getContext('2d');
+      let W, H;
+
+      function resize() {
+        const rect = container.getBoundingClientRect();
+        W = canvas.width = rect.width;
+        H = canvas.height = rect.height;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const cities = [
+        { name: 'Lagos', x: 0.2, y: 0.5, color: '#00ff88', size: 8 },
+        { name: 'Abuja', x: 0.45, y: 0.3, color: '#3b82f6', size: 7 },
+        { name: 'Port Harcourt', x: 0.7, y: 0.6, color: '#a855f7', size: 7 },
+        { name: 'Kano', x: 0.5, y: 0.75, color: '#22d3ee', size: 6 },
+        { name: 'Ibadan', x: 0.15, y: 0.7, color: '#00ff88', size: 5 },
+        { name: 'Enugu', x: 0.6, y: 0.45, color: '#3b82f6', size: 5 },
+        { name: 'Jos', x: 0.42, y: 0.5, color: '#a855f7', size: 5 },
+        { name: 'Kaduna', x: 0.38, y: 0.2, color: '#22d3ee', size: 5 },
+      ];
+
+      const links = [
+        [0, 1], [0, 4], [1, 5], [1, 6], [1, 7],
+        [2, 5], [2, 3], [3, 6], [3, 7],
+        [4, 0], [5, 6], [6, 7]
+      ];
+
+      const packets = [];
+      function spawnPacket() {
+        const link = links[Math.floor(Math.random() * links.length)];
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        packets.push({
+          from: dir === 1 ? link[0] : link[1],
+          to: dir === 1 ? link[1] : link[0],
+          t: 0,
+          speed: 0.008 + Math.random() * 0.012,
+          color: cities[dir === 1 ? link[0] : link[1]].color
+        });
+      }
+
+      for (let i = 0; i < 12; i++) {
+        spawnPacket();
+        packets[i].t = Math.random();
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Draw links
+        ctx.globalAlpha = 0.15;
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < links.length; i++) {
+          const a = cities[links[i][0]];
+          const b = cities[links[i][1]];
+          ctx.beginPath();
+          ctx.moveTo(a.x * W, a.y * H);
+          ctx.lineTo(b.x * W, b.y * H);
+          ctx.stroke();
+        }
+
+        // Draw packets
+        for (let i = packets.length - 1; i >= 0; i--) {
+          const p = packets[i];
+          p.t += p.speed;
+          if (p.t > 1) {
+            packets.splice(i, 1);
+            spawnPacket();
+            continue;
+          }
+          const from = cities[p.from];
+          const to = cities[p.to];
+          const x = lerp(from.x * W, to.x * W, p.t);
+          const y = lerp(from.y * H, to.y * H, p.t);
+          ctx.globalAlpha = 0.8 * (1 - Math.abs(p.t - 0.5) * 2);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.3;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw nodes
+        ctx.globalAlpha = 1;
+        for (let i = 0; i < cities.length; i++) {
+          const c = cities[i];
+          const cx = c.x * W;
+          const cy = c.y * H;
+
+          // Glow
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, c.size * 4);
+          grad.addColorStop(0, c.color + '30');
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, c.size * 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node
+          ctx.fillStyle = c.color;
+          ctx.beginPath();
+          ctx.arc(cx, cy, c.size, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Ring
+          ctx.strokeStyle = c.color;
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.3;
+          ctx.beginPath();
+          ctx.arc(cx, cy, c.size + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
+          // Label
+          ctx.fillStyle = '#e8f0f8';
+          ctx.font = '11px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(c.name, cx, cy - c.size - 10);
+        }
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+
+      setInterval(function () {
+        for (let i = 0; i < 3; i++) spawnPacket();
+      }, 2000);
+    })();
+  </script>
 </body>
 </html>
