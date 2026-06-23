@@ -117,14 +117,23 @@ function updateClock() {
 /* ── Weather ──────────────────────────────────────────────────── */
 async function fetchWeather() {
   try {
-    const d = await authFetch(`/api/weather?city=${S.city}`, {}, 10000);
+    const d = await authFetch(`/api/weather?city=${S.city}`, {}, 15000);
     S.weather = d;
     const el = document.getElementById('hdr-weather');
-    if (el && !d.error) {
-      el.querySelector('.val').innerHTML = `${d.icon} ${d.temperature}${d.unit} · ${d.description}`;
-      el.title = `Humidity: ${d.humidity}% · Wind: ${d.wind_speed} km/h`;
+    if (el) {
+      if (d.error || d.description === 'Unavailable') {
+        el.querySelector('.val').innerHTML = `🌡️ --`;
+        el.title = 'Weather unavailable';
+      } else {
+        const temp = d.temperature != null ? d.temperature + '°C' : '--';
+        el.querySelector('.val').innerHTML = `${d.icon || '🌡️'} ${temp} · ${d.description || ''}`;
+        el.title = `Humidity: ${d.humidity ?? '--'}% · Wind: ${d.wind_speed ?? '--'} km/h`;
+      }
     }
-  } catch { /* silent */ }
+  } catch(e) {
+    const el = document.getElementById('hdr-weather');
+    if (el) el.querySelector('.val').innerHTML = '🌡️ --';
+  }
 }
 
 /* ── Unread badge ─────────────────────────────────────────────── */
@@ -136,7 +145,21 @@ async function fetchUnreadCount() {
     const badge = document.getElementById('unread-badge');
     if (badge) {
       badge.textContent = count;
-      badge.style.display = count > 0 ? 'flex' : 'none';
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+    // Also update the complaint toggle button with a small badge
+    const btn = document.getElementById('complaint-toggle');
+    if (btn) {
+      let btnBadge = btn.querySelector('.toggle-badge');
+      if (!btnBadge) {
+        btnBadge = document.createElement('span');
+        btnBadge.className = 'toggle-badge';
+        btnBadge.style.cssText = 'position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none';
+        btn.style.position = 'relative';
+        btn.appendChild(btnBadge);
+      }
+      btnBadge.textContent = count;
+      btnBadge.style.display = count > 0 ? 'flex' : 'none';
     }
   } catch { /* silent */ }
 }
@@ -1278,13 +1301,10 @@ function afterAuth() {
   document.getElementById('complaint-minimize').addEventListener('click', () => {
     document.getElementById('complaint-panel').classList.toggle('minimized');
   });
-  document.getElementById('complaint-create-btn').addEventListener('click', createComplaint);
+  document.getElementById('complaint-new-btn').addEventListener('click', toggleNewMsgDropdown);
   document.getElementById('complaint-send').addEventListener('click', sendComplaintMessage);
   document.getElementById('complaint-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendComplaintMessage();
-  });
-  document.getElementById('complaint-new-btn').addEventListener('click', () => {
-    document.getElementById('complaint-subject').focus();
   });
   loadCasesList();
   } catch(e) { console.error('[INIT] afterAuth error:', e); }
@@ -1473,7 +1493,7 @@ function convertToWebP(dataUrl) {
 }
 
 
-// ── Cases Panel (messaging-app style) ─────────────────────────────
+// ── Cases Panel (Instagram DM style) ─────────────────────────────
 
 let _activeCaseId = null;
 let _casePollTimer = null;
@@ -1484,9 +1504,20 @@ function toggleComplaintPanel() {
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
     loadCasesList();
+    if (S.user?.role === 'superadmin') loadUserDropdown();
   } else {
     if (_casePollTimer) { clearInterval(_casePollTimer); _casePollTimer = null; }
+    closeCaseThread();
   }
+}
+
+function closeCaseThread() {
+  const thread = document.getElementById('case-thread');
+  const list = document.getElementById('cases-list');
+  if (thread) thread.style.display = 'none';
+  if (list) list.style.maxHeight = '';
+  _activeCaseId = null;
+  if (_casePollTimer) { clearInterval(_casePollTimer); _casePollTimer = null; }
 }
 
 async function loadCasesList() {
@@ -1494,28 +1525,30 @@ async function loadCasesList() {
     const data = await authFetch('/api/cases', {}, 10000);
     const list = document.getElementById('cases-list');
     if (!data.cases?.length) {
-      list.innerHTML = '<div class="cases-empty">No conversations yet.<br>Start a new case below.</div>';
+      list.innerHTML = '<div class="cases-empty">No cases available</div>';
       return;
     }
     list.innerHTML = data.cases.map(c => {
       const initials = (c.user_name || '?').slice(0, 2).toUpperCase();
       const avatarBg = c.avatar_color || '#FF9E00';
       const timeAgo = _timeAgo(c.last_message_at || c.updated_at);
-      const preview = (c.last_message || c.subject || '').slice(0, 50);
+      const preview = (c.last_message || c.subject || '').slice(0, 55);
       const unread = c.unread_count || 0;
       const isActive = c.id === _activeCaseId;
-      const closedBadge = c.status === 'closed' ? '<span class="case-closed-tag">Closed</span>' : '';
-      const priorityDot = c.priority === 'urgent' ? '<span class="priority-dot urgent"></span>' :
-                          c.priority === 'high' ? '<span class="priority-dot high"></span>' : '';
-      return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}">
-        <div class="case-avatar" style="background:${avatarBg}">
-          ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" />` : `<span>${initials}</span>`}
+      const closedTag = c.status === 'closed' ? '<span style="font-size:9px;color:var(--txt3);background:rgba(255,255,255,.06);padding:1px 6px;border-radius:8px;margin-left:4px">Closed</span>' : '';
+      const unreadDot = unread > 0 ? '<span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>' : '';
+      return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s;${isActive ? 'background:rgba(0,255,136,.06)' : ''}">
+        <div class="case-avatar" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;background:${avatarBg}">
+          ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" style="width:100%;height:100%;object-fit:cover" />` : `<span>${initials}</span>`}
         </div>
-        <div class="case-info">
-          <div class="case-name">${c.user_name || 'Unknown'}${priorityDot}${closedBadge}</div>
-          <div class="case-preview">${preview}${timeAgo ? ' · ' + timeAgo : ''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:13px;font-weight:600;color:var(--txt)">${c.user_name || 'Unknown'}</span>
+            ${closedTag}
+          </div>
+          <div style="font-size:11px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${preview}${timeAgo ? ' · ' + timeAgo : ''}</div>
         </div>
-        ${unread > 0 ? `<div class="case-unread">${unread}</div>` : ''}
+        ${unreadDot}
       </div>`;
     }).join('');
   } catch(e) {
@@ -1523,17 +1556,55 @@ async function loadCasesList() {
   }
 }
 
+async function loadUserDropdown() {
+  try {
+    const data = await authFetch('/api/auth/users', {}, 8000);
+    const sel = document.getElementById('new-msg-user-select');
+    if (!sel || !data.users) return;
+    sel.innerHTML = '<option value="">Select a user…</option>' +
+      data.users.filter(u => u.id !== S.user?.id).map(u =>
+        `<option value="${u.id}">${u.username} (${u.role})</option>`
+      ).join('');
+  } catch(e) { /* silent */ }
+}
+
+function toggleNewMsgDropdown() {
+  const dd = document.getElementById('new-msg-dropdown');
+  dd.classList.toggle('hidden');
+}
+
+async function createCaseForUser() {
+  const sel = document.getElementById('new-msg-user-select');
+  const inp = document.getElementById('new-msg-subject');
+  const subject = inp.value.trim();
+  if (!subject) { toast('Enter a subject', 'err'); return; }
+  try {
+    const data = await authFetch('/api/complaints', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({subject})
+    });
+    inp.value = '';
+    document.getElementById('new-msg-dropdown').classList.add('hidden');
+    toast('Conversation started!', 'ok');
+    await loadCasesList();
+    openCase(data.complaint.id);
+  } catch(e) { toast('Failed: ' + e.message, 'err'); }
+}
+
 async function openCase(caseId) {
   _activeCaseId = caseId;
   // Highlight in list
   document.querySelectorAll('.case-item').forEach(el => {
-    el.classList.toggle('active', +el.dataset.caseId === caseId);
+    el.style.background = +el.dataset.caseId === caseId ? 'rgba(0,255,136,.06)' : '';
   });
+  // Show thread
+  const thread = document.getElementById('case-thread');
+  const list = document.getElementById('cases-list');
+  if (thread) thread.style.display = 'flex';
+  if (list) list.style.maxHeight = '160px';
   // Load messages
   await loadCaseMessages(caseId);
-  // Show message input
-  document.getElementById('complaint-input').disabled = false;
-  document.getElementById('complaint-send').disabled = false;
   // Mark as read
   try { await authFetch(`/api/cases/${caseId}/read`, {method:'POST'}); } catch {}
   fetchUnreadCount();
@@ -1548,29 +1619,42 @@ async function loadCaseMessages(caseId) {
     const msgs = document.getElementById('complaint-msgs');
     const complaint = data.complaint || {};
     const isClosed = complaint.status === 'closed';
-
+    // Update header
+    const nameEl = document.getElementById('thread-case-name');
+    const statusEl = document.getElementById('thread-case-status');
+    if (nameEl) nameEl.textContent = complaint.subject || `Case #${caseId}`;
+    if (statusEl) {
+      statusEl.textContent = isClosed ? 'Closed' : 'Open';
+      statusEl.style.background = isClosed ? 'rgba(255,255,255,.06)' : 'rgba(0,255,136,.12)';
+      statusEl.style.color = isClosed ? 'var(--txt3)' : 'var(--accent)';
+    }
     if (!data.messages?.length) {
-      msgs.innerHTML = `<div class="chat-msg system">Case opened. Send your first message.</div>`;
+      msgs.innerHTML = `<div class="chat-msg system" style="text-align:center;color:var(--txt3);font-size:11px;padding:8px">No messages yet.</div>`;
     } else {
       msgs.innerHTML = data.messages.map(m => {
         const isMe = m.sender_name === S.user?.username;
         const isSystem = m.message_type === 'system';
-        if (isSystem) return `<div class="chat-msg system">${m.message}</div>`;
+        if (isSystem) return `<div class="chat-msg system" style="text-align:center;color:var(--txt3);font-size:11px;padding:4px">${m.message}</div>`;
         const ts = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-        return `<div class="chat-msg ${isMe ? 'user' : 'assistant'}">
-          <div class="msg-sender">${isMe ? 'You' : m.sender_name}</div>
-          <div class="msg-text">${m.message}</div>
-          <div class="msg-time">${ts}</div>
+        const bg = isMe ? 'var(--accent)' : 'var(--bg3)';
+        const color = isMe ? '#000' : 'var(--txt)';
+        const align = isMe ? 'flex-end' : 'flex-start';
+        const radius = isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px';
+        return `<div style="display:flex;flex-direction:column;align-items:${align};margin-bottom:6px">
+          <div style="font-size:10px;color:var(--txt3);margin-bottom:2px;${isMe ? 'text-align:right' : ''}">${isMe ? 'You' : m.sender_name}</div>
+          <div style="max-width:80%;padding:8px 12px;border-radius:${radius};background:${bg};color:${color};font-size:13px;line-height:1.4">${m.message}</div>
+          <div style="font-size:9px;color:var(--txt3);margin-top:2px;${isMe ? 'text-align:right' : ''}">${ts}</div>
         </div>`;
       }).join('');
     }
-
     if (isClosed) {
-      msgs.innerHTML += `<div class="chat-msg system case-closed-msg">🔒 This case is closed${complaint.resolution_notes ? ': ' + complaint.resolution_notes : ''}</div>`;
+      msgs.innerHTML += `<div class="chat-msg system" style="text-align:center;color:var(--txt3);font-size:11px;padding:6px;background:rgba(255,255,255,.03);border-radius:8px;margin-top:4px">🔒 Case closed${complaint.resolution_notes ? ': ' + complaint.resolution_notes : ''}</div>`;
       document.getElementById('complaint-input').disabled = true;
       document.getElementById('complaint-send').disabled = true;
+    } else {
+      document.getElementById('complaint-input').disabled = false;
+      document.getElementById('complaint-send').disabled = false;
     }
-
     msgs.scrollTop = msgs.scrollHeight;
   } catch(e) {
     console.error('[CASES] Load messages error:', e);
@@ -1578,9 +1662,14 @@ async function loadCaseMessages(caseId) {
 }
 
 async function createComplaint() {
-  const inp = document.getElementById('complaint-subject');
+  const dd = document.getElementById('new-msg-dropdown');
+  if (dd.classList.contains('hidden')) {
+    toggleNewMsgDropdown();
+    return;
+  }
+  const inp = document.getElementById('new-msg-subject');
   const subject = inp.value.trim();
-  if (!subject) { toast('Enter a subject for your case', 'err'); return; }
+  if (!subject) { toast('Enter a subject', 'err'); return; }
   try {
     const data = await authFetch('/api/complaints', {
       method: 'POST',
@@ -1588,13 +1677,13 @@ async function createComplaint() {
       body: JSON.stringify({subject})
     });
     inp.value = '';
+    dd.classList.add('hidden');
     toast('Case created!', 'ok');
     _activeCaseId = data.complaint.id;
-    document.getElementById('complaint-input').disabled = false;
-    document.getElementById('complaint-send').disabled = false;
-    document.getElementById('complaint-input').focus();
     await loadCasesList();
     await loadCaseMessages(_activeCaseId);
+    document.getElementById('case-thread').style.display = 'flex';
+    document.getElementById('cases-list').style.maxHeight = '160px';
   } catch(e) {
     toast('Failed: ' + e.message, 'err');
   }
@@ -1602,7 +1691,7 @@ async function createComplaint() {
 
 async function sendComplaintMessage() {
   if (!_activeCaseId) {
-    toast('Open a case first', 'err');
+    toast('Open a conversation first', 'err');
     return;
   }
   const inp = document.getElementById('complaint-input');
@@ -1667,7 +1756,18 @@ async function loadActivities() {
 }
 
 function downloadActivityLog() {
-  window.open('/api/activity/download', '_blank');
+  const token = getToken();
+  fetch('/api/activity/download', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'activity_log.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(e => toast('Download failed: ' + e.message, 'err'));
 }
 
 /* ── Bootstrap ────────────────────────────────────────────────── */

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from typing import Literal, Optional
 import hashlib, json, time, io, csv
 from datetime import datetime
@@ -388,13 +388,20 @@ def update_profile(
     """Update the current user's profile (theme, display_name, avatar_color, settings)."""
     old_profile = get_user_profile(_user["id"])
     profile = update_user_profile(_user["id"], **body)
-    # Log what changed
-    changes = []
+    # Log every change individually
     if old_profile and body:
         if "display_name" in body and body["display_name"] != old_profile.get("display_name"):
-            changes.append(f"Display name → {body['display_name']}")
+            log_activity("profile", f"Display name changed to \"{body['display_name']}\"",
+                         f'Display name changed to <strong>"{body["display_name"]}"</strong>',
+                         _user["id"], _user["username"])
         if "avatar_color" in body and body["avatar_color"] != old_profile.get("avatar_color"):
-            changes.append("Avatar colour updated")
+            log_activity("profile", f"Avatar colour changed to {body['avatar_color']}",
+                         f'Avatar colour changed to <strong style="color:{body["avatar_color"]}">{body["avatar_color"]}</strong>',
+                         _user["id"], _user["username"])
+        if "theme" in body and body["theme"] != old_profile.get("theme"):
+            log_activity("profile", f"Theme changed to {body['theme']}",
+                         f'Theme changed to <strong>{body["theme"]}</strong>',
+                         _user["id"], _user["username"])
         if "settings" in body:
             new_settings = body["settings"]
             old_settings = old_profile.get("settings", {}) or {}
@@ -402,19 +409,16 @@ def update_profile(
                 try: old_settings = json.loads(old_settings)
                 except: old_settings = {}
             if "avatar_data" in new_settings and new_settings.get("avatar_data") and new_settings["avatar_data"] != old_settings.get("avatar_data"):
-                changes.append("Profile photo updated")
+                log_activity("profile", "Profile photo updated",
+                             'Profile photo <strong>updated</strong>', _user["id"], _user["username"])
             if "telegram" in new_settings and new_settings.get("telegram") != old_settings.get("telegram"):
-                changes.append(f"Telegram → {new_settings['telegram']}")
+                log_activity("profile", f"Telegram set to {new_settings['telegram']}",
+                             f'Telegram set to <strong>{new_settings["telegram"]}</strong>',
+                             _user["id"], _user["username"])
             if "whatsapp" in new_settings and new_settings.get("whatsapp") != old_settings.get("whatsapp"):
-                changes.append(f"WhatsApp → {new_settings['whatsapp']}")
-    if changes:
-        log_activity(
-            act_type="profile",
-            message=f"Profile updated: {', '.join(changes)}",
-            html=f'Profile updated: <strong>{", ".join(changes)}</strong>',
-            user_id=_user["id"],
-            username=_user["username"],
-        )
+                log_activity("profile", f"WhatsApp set to {new_settings['whatsapp']}",
+                             f'WhatsApp set to <strong>{new_settings["whatsapp"]}</strong>',
+                             _user["id"], _user["username"])
     return {"profile": profile}
 
 
@@ -627,9 +631,9 @@ def download_activities(
     writer.writerow(["ID", "Type", "Message", "Username", "User Agent", "Timestamp"])
     for a in acts:
         writer.writerow([a["id"], a["type"], a["message"], a.get("username", ""), a.get("user_agent", ""), a.get("created_at", "")])
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
+    csv_content = output.getvalue()
+    return Response(
+        content=csv_content,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=activity_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"},
     )
@@ -670,25 +674,38 @@ def get_weather(
     url = (
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={coords['lat']}&longitude={coords['lon']}"
-        f"&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m"
+        f"&current_weather=true"
+        f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
         f"&timezone={coords['tz']}"
     )
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "OASIS-X/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
-        current = data.get("current", {})
-        code = current.get("weathercode", 0)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode()
+        data = json.loads(raw)
+        # Open-Meteo returns either "current" or "current_weather"
+        current = data.get("current") or data.get("current_weather") or {}
+        code = current.get("weather_code") or current.get("weathercode") or 0
+        temp = current.get("temperature_2m")
+        humidity = current.get("relative_humidity_2m")
+        wind = current.get("wind_speed_10m") or current.get("windspeed_10m")
         icon, desc = WMO_CODES.get(code, ("🌡️", "Unknown"))
+        if temp is None:
+            # Try current_weather format
+            cw = data.get("current_weather", {})
+            temp = cw.get("temperature")
+            wind = cw.get("windspeed")
+            code = cw.get("weathercode", 0)
+            icon, desc = WMO_CODES.get(code, ("🌡️", "Unknown"))
         return {
             "city": city,
-            "temperature": current.get("temperature_2m"),
-            "humidity": current.get("relative_humidity_2m"),
-            "wind_speed": current.get("windspeed_10m"),
+            "temperature": round(temp, 1) if temp is not None else None,
+            "humidity": humidity,
+            "wind_speed": round(wind, 1) if wind is not None else None,
             "weather_code": code,
             "icon": icon,
             "description": desc,
-            "unit": data.get("current_units", {}).get("temperature_2m", "°C"),
+            "unit": "°C",
         }
     except Exception as e:
         return {"city": city, "error": str(e), "icon": "❓", "description": "Unavailable"}
