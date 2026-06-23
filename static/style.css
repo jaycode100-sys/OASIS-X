@@ -80,13 +80,12 @@
 @keyframes nexusBubbleIn { from { opacity: 0; transform: translateY(8px) scale(.95); } to { opacity: 1; transform: none; } }
 .nexus-fab {
   width: 52px; height: 52px; border-radius: 14px; border: none;
-  cursor: pointer; padding: 0;
+  cursor: pointer; overflow: hidden; padding: 0;
   box-shadow: 0 4px 20px rgba(0,0,0,.4), 0 0 0 3px rgba(59,130,246,.15);
   transition: all .3s cubic-bezier(.4,0,.2,1);
   background: linear-gradient(135deg, #1e3a5f, #2563eb);
-  color: #fff; font-size: 24px;
-  display: flex; align-items: center; justify-content: center;
 }
+.nexus-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
 .nexus-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,.5), 0 0 0 5px rgba(59,130,246,.2); }
 .nexus-fab:active { transform: scale(.95); }
 
