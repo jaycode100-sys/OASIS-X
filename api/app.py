@@ -40,8 +40,8 @@ app.add_middleware(
 
 # ── Static files ──
 import os as _os
-STATIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "static")
-STATIC_DIR = _os.path.normpath(STATIC_DIR)
+_APP_DIR = _os.path.dirname(_os.path.abspath(__file__))
+STATIC_DIR = _os.path.normpath(_os.path.join(_APP_DIR, "..", "static"))
 if _os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
