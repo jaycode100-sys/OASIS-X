@@ -1517,38 +1517,54 @@ function closeCaseThread() {
 }
 
 async function loadCasesList() {
+  const list = document.getElementById('cases-list');
   try {
     const data = await authFetch('/api/cases', {}, 10000);
-    const list = document.getElementById('cases-list');
     if (!data.cases?.length) {
-      list.innerHTML = '<div class="cases-empty">No cases available</div>';
+      list.innerHTML = `<div class="cases-empty">
+        <div style="font-size:40px;margin-bottom:12px;opacity:.4">✉️</div>
+        <div style="font-size:14px;font-weight:600;color:var(--txt2);margin-bottom:4px">No messages yet</div>
+        <div style="font-size:12px;color:var(--txt3)">Click ✏️ to start a conversation</div>
+      </div>`;
       return;
     }
     list.innerHTML = data.cases.map(c => {
       const initials = (c.user_name || '?').slice(0, 2).toUpperCase();
       const avatarBg = c.avatar_color || '#FF9E00';
       const timeAgo = _timeAgo(c.last_message_at || c.updated_at);
-      const preview = (c.last_message || c.subject || '').slice(0, 55);
+      const preview = (c.last_message || c.subject || '').slice(0, 80);
+      const subject = (c.subject || 'No subject').slice(0, 40);
       const unread = c.unread_count || 0;
       const isActive = c.id === _activeCaseId;
-      const closedTag = c.status === 'closed' ? '<span style="font-size:9px;color:var(--txt3);background:rgba(255,255,255,.06);padding:1px 6px;border-radius:8px;margin-left:4px">Closed</span>' : '';
-      const unreadDot = unread > 0 ? '<span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>' : '';
-      return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s;${isActive ? 'background:rgba(0,255,136,.06)' : ''}">
-        <div class="case-avatar" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;background:${avatarBg}">
-          ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" style="width:100%;height:100%;object-fit:cover" />` : `<span>${initials}</span>`}
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:4px">
-            <span style="font-size:13px;font-weight:600;color:var(--txt)">${c.user_name || 'Unknown'}</span>
-            ${closedTag}
+      const closedTag = c.status === 'closed' ? '<span style="font-size:9px;color:var(--red);background:rgba(239,68,68,.12);padding:2px 8px;border-radius:8px;font-weight:600">Closed</span>' : '<span style="font-size:9px;color:#22c55e;background:rgba(34,197,94,.12);padding:2px 8px;border-radius:8px;font-weight:600">Open</span>';
+      const senderName = c.last_sender || c.user_name || 'Unknown';
+      return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}">
+        <div class="case-item-left">
+          <div class="case-avatar" style="background:${avatarBg}">
+            ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />` : `<span>${initials}</span>`}
           </div>
-          <div style="font-size:11px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${preview}${timeAgo ? ' · ' + timeAgo : ''}</div>
         </div>
-        ${unreadDot}
+        <div class="case-item-body">
+          <div class="case-item-top">
+            <span class="case-item-name">${c.user_name || 'Unknown'}</span>
+            <span class="case-item-time">${timeAgo}</span>
+          </div>
+          <div class="case-item-subject">${subject}</div>
+          <div class="case-item-preview">${senderName}: ${preview}</div>
+          <div class="case-item-bottom">
+            ${closedTag}
+            ${unread > 0 ? `<span class="case-item-unread">${unread}</span>` : ''}
+          </div>
+        </div>
       </div>`;
     }).join('');
   } catch(e) {
     console.error('[CASES] Load error:', e);
+    list.innerHTML = `<div class="cases-empty">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.4">✉️</div>
+      <div style="font-size:14px;font-weight:600;color:var(--txt2);margin-bottom:4px">No messages yet</div>
+      <div style="font-size:12px;color:var(--txt3)">Click ✏️ to start a conversation</div>
+    </div>`;
   }
 }
 
