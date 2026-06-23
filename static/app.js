@@ -143,24 +143,17 @@ async function fetchUnreadCount() {
     const d = await authFetch('/api/cases/unread', {}, 8000);
     const count = d.unread || 0;
     S.unreadCount = count;
+    // Panel title badge
     const badge = document.getElementById('unread-badge');
     if (badge) {
       badge.textContent = count;
       badge.style.display = count > 0 ? 'inline-flex' : 'none';
     }
-    // Also update the complaint toggle button with a small badge
-    const btn = document.getElementById('complaint-toggle');
-    if (btn) {
-      let btnBadge = btn.querySelector('.toggle-badge');
-      if (!btnBadge) {
-        btnBadge = document.createElement('span');
-        btnBadge.className = 'toggle-badge';
-        btnBadge.style.cssText = 'position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none';
-        btn.style.position = 'relative';
-        btn.appendChild(btnBadge);
-      }
-      btnBadge.textContent = count;
-      btnBadge.style.display = count > 0 ? 'flex' : 'none';
+    // Floating action button badge
+    const fabBadge = document.getElementById('fab-unread-badge');
+    if (fabBadge) {
+      fabBadge.textContent = count;
+      fabBadge.style.display = count > 0 ? 'flex' : 'none';
     }
   } catch { /* silent */ }
 }
@@ -1501,8 +1494,10 @@ let _casePollTimer = null;
 
 function toggleComplaintPanel() {
   const p = document.getElementById('complaint-panel');
+  const fab = document.getElementById('complaint-toggle');
   p.classList.remove('minimized');
   p.classList.toggle('hidden');
+  if (fab) fab.classList.toggle('panel-open', !p.classList.contains('hidden'));
   if (!p.classList.contains('hidden')) {
     loadCasesList();
     if (S.user?.role === 'superadmin') loadUserDropdown();
