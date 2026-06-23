@@ -1071,16 +1071,32 @@ function afterAuth() {
   document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
   document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.add('hidden'); });
 
-  // Simulation toggle
+  // Simulation toggle — Real Fibre Lines reveals additional cities
   const simToggle = document.getElementById('sim-toggle');
   const simComingSoon = document.getElementById('sim-coming-soon');
+  const realFibreCities = document.querySelectorAll('.real-fibre-city');
   if (simToggle) {
     simToggle.addEventListener('change', () => {
       if (simToggle.checked) {
         simComingSoon.style.display = 'block';
-        setTimeout(() => { simComingSoon.style.display = 'none'; simToggle.checked = false; }, 3000);
+        realFibreCities.forEach(btn => btn.classList.remove('hidden'));
+        toast('New cities unlocked: Kaduna, Enugu, Jos, Ibadan', 'ok');
+        // Update city grid layout
+        const grid = document.querySelector('.city-grid');
+        if (grid) grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
       } else {
         simComingSoon.style.display = 'none';
+        realFibreCities.forEach(btn => {
+          btn.classList.add('hidden');
+          if (btn.classList.contains('active')) {
+            btn.classList.remove('active');
+            document.querySelector('.city-btn[data-city="Lagos"]').classList.add('active');
+            S.city = 'Lagos';
+            document.querySelector('#hdr-city-active .val').textContent = 'Lagos';
+          }
+        });
+        const grid = document.querySelector('.city-grid');
+        if (grid) grid.style.gridTemplateColumns = '';
       }
     });
   }
@@ -1150,10 +1166,8 @@ function afterAuth() {
   // Chat toggle, minimize & send
   // Nexus chat widget
   const nexusFab = document.getElementById('nexus-fab');
-  const nexusPopup = document.getElementById('nexus-chat-popup');
-  const nexusClose = document.getElementById('nexus-popup-close');
-  if (nexusFab) nexusFab.addEventListener('click', () => { nexusPopup.style.display = 'none'; const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
-  if (nexusClose) nexusClose.addEventListener('click', () => { nexusPopup.style.display = 'none'; });
+  const nexusBubble = document.getElementById('nexus-chat-bubble');
+  if (nexusFab) nexusFab.addEventListener('click', () => { if (nexusBubble) nexusBubble.style.display = 'none'; const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
   document.getElementById('chat-close').addEventListener('click', toggleChat);
   document.getElementById('chat-minimize').addEventListener('click', minimizeChat);
   document.getElementById('chat-send').addEventListener('click', doChat);

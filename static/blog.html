@@ -152,6 +152,13 @@
       document.addEventListener(evt, () => { if (localStorage.getItem('token')) startSessionTimer(); }, {passive:true});
     });
     startSessionTimer();
+
+    // Feature preview timestamp
+    const fpTime = document.getElementById('feature-preview-time');
+    if (fpTime) {
+      const now = new Date();
+      fpTime.textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' — ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
   </script>
   <header class="header">
     <div class="header-left">
@@ -179,6 +186,26 @@
       <div class="live-badge"><span class="live-dot"></span> Live</div>
     </div>
     <p class="page-subtitle">Latest updates, features, and incident reports from the OASIS-X team.</p>
+
+    <article class="blog-post" style="border-color:rgba(0,255,136,0.2);background:linear-gradient(135deg,var(--bg2),rgba(0,255,136,0.03))">
+      <div class="post-meta">
+        <span class="post-tag feature">Coming Soon</span>
+        <span id="feature-preview-time"></span>
+      </div>
+      <h2 class="post-title" style="color:var(--accent)">Real Fibre Line Monitoring — Rapidly Approaching</h2>
+      <div class="post-content">
+        <p>We're actively developing <strong>Real Fibre Line Monitoring</strong> — a major expansion that will bring <strong>4 new Nigerian cities</strong> into the OASIS-X network: <strong>Kaduna, Enugu, Jos, and Ibadan</strong>.</p>
+        <p>This feature will enable live monitoring of actual fibre infrastructure across eight cities, with real-time NCC QoS baseline tracking, environmental modelling specific to each region, and autonomous fault detection spanning the full Nigerian backbone.</p>
+        <p style="color:var(--accent);font-weight:600;font-size:13px;">Development is progressing rapidly. Stay tuned for the official release announcement.</p>
+      </div>
+      <div class="post-footer">
+        <span class="post-author">Posted by OASIS-X Team</span>
+        <div class="post-actions">
+          <button class="post-action">Share</button>
+          <button class="post-action">Bookmark</button>
+        </div>
+      </div>
+    </article>
 
     <article class="blog-post">
       <div class="post-meta">

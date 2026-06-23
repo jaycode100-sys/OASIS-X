@@ -8,8 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/png" href="/static/oasis.png" />
-  <style>
+    <link rel="icon" type="image/png" href="/static/oasis.png" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/tabler-icons.min.css" />
+    <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
@@ -541,10 +542,17 @@
     }
 
     .feature-icon {
-      font-size: 36px;
-      margin-bottom: 20px;
-      display: block;
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px; margin-bottom: 20px;
+      font-size: 24px; color: #fff;
     }
+    .feature-icon.blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .feature-icon.green { background: rgba(0,255,136,0.15); color: #00ff88; }
+    .feature-icon.teal { background: rgba(20,184,166,0.2); color: #2dd4bf; }
+    .feature-icon.dark-blue { background: rgba(30,58,138,0.4); color: #60a5fa; }
+    .feature-icon.gold { background: rgba(217,119,6,0.2); color: #f59e0b; }
+    .feature-icon.purple { background: rgba(139,92,246,0.2); color: #a78bfa; }
 
     .feature-title {
       font-family: var(--font-display);
@@ -1023,32 +1031,32 @@
     <h2 class="section-title">Built for Nigerian Networks</h2>
     <div class="features-grid">
       <div class="feature-card">
-        <span class="feature-icon">📡</span>
+        <span class="feature-icon blue"><i class="ti ti-activity"></i></span>
         <h3 class="feature-title">Real-Time Monitoring</h3>
         <p class="feature-desc">Continuous OSNR, BER, and latency tracking across Lagos, Abuja, Port Harcourt, and Kano with NCC QoS baseline comparison.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🤖</span>
+        <span class="feature-icon green"><i class="ti ti-brain"></i></span>
         <h3 class="feature-title">AI Fault Diagnosis</h3>
         <p class="feature-desc">LLM-powered root cause analysis with confidence scoring, urgency classification, and actionable repair recommendations.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🔄</span>
+        <span class="feature-icon teal"><i class="ti ti-shield-check"></i></span>
         <h3 class="feature-title">Autonomous Healing</h3>
         <p class="feature-desc">Decision engine maps network states to corrective actions — automatically escalating from DEGRADING to CRITICAL responses.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🌪️</span>
+        <span class="feature-icon dark-blue"><i class="ti ti-cloud-storm"></i></span>
         <h3 class="feature-title">Environmental Modeling</h3>
         <p class="feature-desc">Simulates harmattan dust, rain attenuation, generator failures, and peak congestion patterns specific to Nigerian conditions.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">📊</span>
+        <span class="feature-icon gold"><i class="ti ti-certificate"></i></span>
         <h3 class="feature-title">NCC Compliance</h3>
         <p class="feature-desc">Automated compliance reporting against Nigerian Communications Commission Quality of Service standards for ISPs.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🗺️</span>
+        <span class="feature-icon purple"><i class="ti ti-topology-star-3"></i></span>
         <h3 class="feature-title">Digital Twin</h3>
         <p class="feature-desc">Live network topology visualization showing cable routes, node health, and active fault propagation across the infrastructure.</p>
       </div>

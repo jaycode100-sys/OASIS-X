@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="icon" type="image/png" href="/static/oasis.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/tabler-icons.min.css" />
   <link rel="stylesheet" href="/static/style.css?v=26" />
 </head>
 <body class="auth-loading">
@@ -122,6 +123,10 @@
         <button class="city-btn" data-city="Abuja">🏛️<span>Abuja</span></button>
         <button class="city-btn" data-city="PortHarcourt">⚓<span>P/Harcourt</span></button>
         <button class="city-btn" data-city="Kano">🏜️<span>Kano</span></button>
+        <button class="city-btn real-fibre-city hidden" data-city="Kaduna">🏗️<span>Kaduna</span></button>
+        <button class="city-btn real-fibre-city hidden" data-city="Enugu">🌄<span>Enugu</span></button>
+        <button class="city-btn real-fibre-city hidden" data-city="Jos">⛰️<span>Jos</span></button>
+        <button class="city-btn real-fibre-city hidden" data-city="Ibadan">🌿<span>Ibadan</span></button>
       </div>
     </div>
 
@@ -521,9 +526,9 @@
                 <span class="sim-toggle-slider"></span>
               </label>
             </div>
-            <div id="sim-coming-soon" style="display:none;text-align:center;padding:12px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;margin-top:8px;">
-              <div style="font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;animation:comingSoonPulse 2s ease-in-out infinite;">Feature Coming Soon</div>
-              <div style="font-size:10px;color:var(--txt3);margin-top:4px;">Real fibre line monitoring will be available in the next release</div>
+            <div id="sim-coming-soon" style="display:none;text-align:center;padding:12px 8px;background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:8px;margin-top:8px;">
+              <div style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">🔓 Cities Unlocked</div>
+              <div style="font-size:10px;color:var(--txt3);margin-top:4px;">Kaduna, Enugu, Jos, and Ibadan are now available in the sidebar</div>
             </div>
           </div>
           <button class="profile-save-btn" id="profile-save-btn">Save Changes</button>
@@ -660,26 +665,11 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
 
 <!-- FLOATING NEXUS CHAT WIDGET -->
 <div class="nexus-chat-widget" id="nexus-chat-widget">
-  <div class="nexus-chat-popup" id="nexus-chat-popup" style="display:block">
-    <div class="nexus-popup-header">
-      <div class="nexus-popup-avatars">
-        <img src="/static/nexus.jpg" alt="Nexus" class="nexus-popup-avatar" />
-      </div>
-      <div class="nexus-popup-info">
-        <div class="nexus-popup-name">Nexus AI</div>
-        <div class="nexus-popup-status">Always available</div>
-      </div>
-      <button class="nexus-popup-close" id="nexus-popup-close">✕</button>
-    </div>
-    <div class="nexus-popup-body">
-      <div class="nexus-popup-msg">
-        <img src="/static/nexus.jpg" alt="" class="nexus-msg-avatar" />
-        <div class="nexus-msg-bubble">Have a question? Chat with us!</div>
-      </div>
-    </div>
+  <div class="nexus-chat-bubble" id="nexus-chat-bubble">
+    <span>Have a question? Chat with us!</span>
   </div>
   <button class="nexus-fab" id="nexus-fab" title="Chat with Nexus AI">
-    <img src="/static/nexus.jpg" alt="Nexus" />
+    <i class="ti ti-message-chatbot"></i>
   </button>
 </div>
 
