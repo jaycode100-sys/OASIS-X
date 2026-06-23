@@ -12,7 +12,7 @@
     :root {
       --bg: #060f1a; --bg2: #0b1a2e; --bg3: #10233d;
       --border: #1a3450; --txt: #e0edf8; --txt2: #7090b0; --txt3: #3d5a7a;
-      --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
+      --accent: #00ff88; --accent-rgb: 0,255,136; --accent-dim: rgba(0,255,136,0.15);
       --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
       --mono: 'JetBrains Mono', monospace;
     }
@@ -22,20 +22,39 @@
 
     /* ── Sidebar (case list) ── */
     .cases-sidebar {
-      width: 340px; border-right: 1px solid var(--border);
+      width: 380px; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; background: var(--bg2);
     }
     .cases-sidebar-header {
-      padding: 16px 20px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
     }
-    .cases-sidebar-header h2 { font-size: 18px; font-weight: 700; }
-    .cases-sidebar-header a {
-      font-size: 12px; color: var(--accent); text-decoration: none;
+    .back-btn {
+      background: none; border: none; color: var(--txt2); cursor: pointer;
+      font-size: 18px; padding: 4px; border-radius: 6px; transition: all .2s;
+      display: flex; align-items: center; justify-content: center;
     }
+    .back-btn:hover { color: var(--accent); background: rgba(var(--accent-rgb),.1); }
+    .cases-sidebar-header h2 { font-size: 17px; font-weight: 700; flex: 1; }
+
+    /* Profile badge */
+    .profile-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      background: rgba(var(--accent-rgb),.04);
+    }
+    .profile-badge-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .profile-badge-info { flex: 1; min-width: 0; }
+    .profile-badge-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+    .profile-badge-role { font-size: 10px; color: var(--txt3); text-transform: capitalize; }
+
     .cases-filter {
       padding: 10px 16px; border-bottom: 1px solid var(--border);
-      display: flex; gap: 8px;
+      display: flex; gap: 8px; align-items: center;
     }
     .filter-btn {
       padding: 5px 12px; border-radius: 16px; border: 1px solid var(--border);
@@ -44,55 +63,76 @@
     }
     .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
     .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+    .new-case-btn {
+      margin-left: auto; padding: 5px 12px; border-radius: 16px;
+      border: 1px solid var(--accent); background: transparent;
+      color: var(--accent); font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: var(--font); transition: all .2s;
+    }
+    .new-case-btn:hover { background: var(--accent); color: #000; }
+
     .cases-list { flex: 1; overflow-y: auto; }
+    .cases-empty {
+      padding: 40px 20px; text-align: center;
+      color: var(--txt3); font-size: 13px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 200px;
+    }
+    .cases-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .3; }
+    .cases-empty-title { font-size: 15px; font-weight: 600; color: var(--txt2); margin-bottom: 4px; }
+    .cases-empty-sub { font-size: 12px; color: var(--txt3); }
+
     .case-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 20px; cursor: pointer;
-      transition: background .15s; border-bottom: 1px solid rgba(255,255,255,.03);
+      display: flex; gap: 12px;
+      padding: 12px 16px; cursor: pointer;
+      transition: background .15s; border-bottom: 1px solid rgba(255,255,255,.04);
     }
     .case-item:hover { background: rgba(255,255,255,.04); }
-    .case-item.active { background: rgba(0,255,136,.08); border-left: 3px solid var(--accent); }
+    .case-item.active { background: rgba(var(--accent-rgb),.08); border-left: 3px solid var(--accent); }
     .case-avatar {
       width: 44px; height: 44px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 700; color: #fff;
+      font-size: 14px; font-weight: 700; color: #fff;
       flex-shrink: 0; overflow: hidden;
     }
     .case-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .case-info { flex: 1; min-width: 0; }
-    .case-name {
-      font-size: 14px; font-weight: 600; color: var(--txt);
+    .case-name-row {
       display: flex; align-items: center; gap: 6px;
     }
-    .case-subject { font-size: 12px; color: var(--txt2); margin-top: 2px; }
+    .case-name {
+      font-size: 13px; font-weight: 600; color: var(--txt);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .case-status-tag {
+      font-size: 9px; padding: 1px 6px; border-radius: 8px;
+      font-weight: 600; flex-shrink: 0;
+    }
+    .case-status-tag.open { background: rgba(34,197,94,.12); color: #22c55e; }
+    .case-status-tag.closed { background: rgba(239,68,68,.12); color: var(--red); }
+    .case-subject { font-size: 12px; color: var(--txt2); margin-top: 2px; font-weight: 500; }
     .case-preview {
       font-size: 11px; color: var(--txt3); margin-top: 2px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .case-meta { text-align: right; flex-shrink: 0; }
+    .case-meta { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .case-time { font-size: 10px; color: var(--txt3); }
     .case-unread {
       min-width: 20px; height: 20px; border-radius: 10px;
       background: var(--accent); color: #000;
       font-size: 10px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      padding: 0 5px; margin-top: 4px; margin-left: auto;
+      padding: 0 5px;
     }
-    .case-status-tag {
-      font-size: 9px; padding: 1px 6px; border-radius: 8px;
-      font-weight: 500; margin-top: 4px; display: inline-block;
-    }
-    .case-status-tag.open { background: rgba(0,255,136,.12); color: var(--accent); }
-    .case-status-tag.closed { background: rgba(255,255,255,.06); color: var(--txt3); }
 
     /* ── Main (conversation) ── */
     .cases-main { flex: 1; display: flex; flex-direction: column; }
     .cases-main-empty {
       flex: 1; display: flex; align-items: center; justify-content: center;
-      color: var(--txt3); font-size: 14px;
+      color: var(--txt3); font-size: 14px; flex-direction: column; gap: 8px;
     }
     .case-header {
-      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       background: var(--bg2);
     }
@@ -143,22 +183,32 @@
     .case-input-bar button:hover { opacity: 0.85; }
     .case-input-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* ── New case form ── */
-    .new-case-bar {
-      padding: 12px 20px; border-top: 1px solid var(--border);
-      display: none; gap: 10px; background: var(--bg2);
+    /* ── New case modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,.6); display: none;
+      align-items: center; justify-content: center;
     }
-    .new-case-bar.show { display: flex; }
-    .new-case-bar input {
-      flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    .modal-overlay.show { display: flex; }
+    .modal-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; width: 400px; max-width: 90vw;
+    }
+    .modal-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--txt); }
+    .modal-card label { font-size: 12px; color: var(--txt2); display: block; margin-bottom: 6px; font-weight: 500; }
+    .modal-card input, .modal-card select {
+      width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
       background: var(--bg3); color: var(--txt); font-size: 13px; font-family: var(--font);
-      outline: none;
+      outline: none; margin-bottom: 14px;
     }
-    .new-case-bar button {
-      padding: 10px 16px; border-radius: 8px; border: none;
-      background: var(--accent); color: #000; font-size: 12px; font-weight: 600;
-      cursor: pointer; font-family: var(--font);
+    .modal-card input:focus, .modal-card select:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-actions button {
+      padding: 8px 18px; border-radius: 8px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font);
     }
+    .modal-cancel { background: var(--bg3); color: var(--txt2); }
+    .modal-submit { background: var(--accent); color: #000; }
 
     @media (max-width: 768px) {
       .cases-sidebar { width: 100%; }
@@ -174,21 +224,53 @@
     <!-- Sidebar: case list -->
     <div class="cases-sidebar">
       <div class="cases-sidebar-header">
+        <a href="/dashboard" class="back-btn" title="Back to Dashboard">←</a>
         <h2>💬 Messages</h2>
-        <a href="/dashboard">← Dashboard</a>
+      </div>
+      <!-- Profile badge -->
+      <div class="profile-badge" id="profile-badge" style="display:none">
+        <div class="profile-badge-avatar" id="badge-avatar">?</div>
+        <div class="profile-badge-info">
+          <div class="profile-badge-name" id="badge-name">Loading…</div>
+          <div class="profile-badge-role" id="badge-role">user</div>
+        </div>
       </div>
       <div class="cases-filter">
         <button class="filter-btn active" data-filter="all">All</button>
         <button class="filter-btn" data-filter="open">Open</button>
         <button class="filter-btn" data-filter="closed">Closed</button>
-        <button style="margin-left:auto;padding:5px 12px;border-radius:16px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)" onclick="showNewCase()">+ New</button>
+        <button class="new-case-btn" id="new-case-btn" style="display:none" onclick="showNewCaseModal()">+ New</button>
       </div>
-      <div class="cases-list" id="cases-list"></div>
+      <div class="cases-list" id="cases-list">
+        <div class="cases-empty">
+          <div class="cases-empty-icon">✉️</div>
+          <div class="cases-empty-title">No messages yet</div>
+          <div class="cases-empty-sub">Click + New to start a conversation</div>
+        </div>
+      </div>
     </div>
 
     <!-- Main: conversation -->
     <div class="cases-main" id="cases-main">
-      <div class="cases-main-empty" id="cases-empty">Select a conversation to start</div>
+      <div class="cases-main-empty" id="cases-empty">
+        <div style="font-size:48px;opacity:.3">💬</div>
+        <div>Select a conversation to start</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New case modal -->
+  <div class="modal-overlay" id="new-case-modal">
+    <div class="modal-card">
+      <h3>Start Conversation</h3>
+      <label for="new-case-user">Send to</label>
+      <select id="new-case-user"><option value="">Select a user…</option></select>
+      <label for="new-case-subject">Subject</label>
+      <input type="text" id="new-case-subject" placeholder="Enter subject…" />
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeNewCaseModal()">Cancel</button>
+        <button class="modal-submit" onclick="createNewCase()">Start</button>
+      </div>
     </div>
   </div>
 
@@ -197,6 +279,20 @@
   <script>
     const TOKEN = localStorage.getItem('token');
     if (!TOKEN) window.location.href = '/static/login.html';
+
+    /* 3-min inactivity timeout */
+    let _sessionTimer = null;
+    function startSessionTimer() {
+      if (_sessionTimer) clearTimeout(_sessionTimer);
+      _sessionTimer = setTimeout(() => {
+        localStorage.removeItem('token');
+        window.location.href = '/static/login.html';
+      }, 3 * 60 * 1000);
+    }
+    ['click','keydown','mousemove','touchstart'].forEach(evt => {
+      document.addEventListener(evt, () => { if (localStorage.getItem('token')) startSessionTimer(); }, {passive:true});
+    });
+    startSessionTimer();
 
     async function authFetch(url, opts={}, ms=30000) {
       const ctrl = new AbortController();
@@ -220,8 +316,32 @@
       try {
         const me = await authFetch('/api/auth/me');
         ME = me;
+        renderProfileBadge();
+        if (ME.role === 'superadmin') {
+          document.getElementById('new-case-btn').style.display = '';
+        }
         await loadCases();
       } catch(e) { console.error(e); }
+    }
+
+    function renderProfileBadge() {
+      if (!ME) return;
+      const badge = document.getElementById('profile-badge');
+      badge.style.display = 'flex';
+      const initials = (ME.username || '?').slice(0, 2).toUpperCase();
+      document.getElementById('badge-name').textContent = ME.username || 'User';
+      document.getElementById('badge-role').textContent = ME.role || 'user';
+      const avatarEl = document.getElementById('badge-avatar');
+      // Try to get profile picture
+      const settings = ME.settings_json ? (typeof ME.settings_json === 'string' ? JSON.parse(ME.settings_json || '{}') : ME.settings_json) : {};
+      const avatarData = settings.avatar_data || '';
+      const avatarColor = settings.avatar_color || ME.avatar_color || '#FF9E00';
+      avatarEl.style.background = avatarColor;
+      if (avatarData) {
+        avatarEl.innerHTML = '<img src="' + avatarData + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />';
+      } else {
+        avatarEl.innerHTML = '<span>' + initials + '</span>';
+      }
     }
 
     async function loadCases() {
@@ -236,7 +356,11 @@
       if (CURRENT_FILTER !== 'all') filtered = ALL_CASES.filter(c => c.status === CURRENT_FILTER);
 
       if (!filtered.length) {
-        list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--txt3);font-size:12px">No conversations yet</div>';
+        list.innerHTML = `<div class="cases-empty">
+          <div class="cases-empty-icon">✉️</div>
+          <div class="cases-empty-title">No messages yet</div>
+          <div class="cases-empty-sub">${ME?.role === 'superadmin' ? 'Click + New to start a conversation' : 'Messages from admin will appear here'}</div>
+        </div>`;
         return;
       }
 
@@ -245,22 +369,25 @@
         const avatarBg = c.avatar_color || '#FF9E00';
         const timeAgo = _timeAgo(c.last_message_at || c.updated_at);
         const preview = (c.last_message || c.subject || '').slice(0, 60);
+        const subject = (c.subject || 'No subject').slice(0, 40);
         const unread = c.unread_count || 0;
         const isActive = ACTIVE_CASE && ACTIVE_CASE.id === c.id;
+        const senderName = c.last_sender || c.user_name || 'Unknown';
         return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})">
           <div class="case-avatar" style="background:${avatarBg}">
-            ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" />` : `<span>${initials}</span>`}
+            ${c.avatar_data ? '<img src="' + c.avatar_data + '" alt="" />' : '<span>' + initials + '</span>'}
           </div>
           <div class="case-info">
-            <div class="case-name">${c.user_name || 'Unknown'}
+            <div class="case-name-row">
+              <span class="case-name">${c.user_name || 'Unknown'}</span>
               <span class="case-status-tag ${c.status}">${c.status}</span>
             </div>
-            <div class="case-subject">${c.subject || ''}</div>
-            <div class="case-preview">${preview}</div>
+            <div class="case-subject">${subject}</div>
+            <div class="case-preview">${senderName}: ${preview}</div>
           </div>
           <div class="case-meta">
             <div class="case-time">${timeAgo}</div>
-            ${unread > 0 ? `<div class="case-unread">${unread}</div>` : ''}
+            ${unread > 0 ? '<div class="case-unread">' + unread + '</div>' : ''}
           </div>
         </div>`;
       }).join('');
@@ -285,15 +412,16 @@
         <div class="case-header">
           <div class="case-header-left">
             <div class="case-header-avatar" style="background:${avatarBg}">
-              ${c.avatar_data ? `<img src="${c.avatar_data}" alt="" style="width:100%;height:100%;object-fit:cover" />` : `<span>${initials}</span>`}
+              ${c.avatar_data ? '<img src="' + c.avatar_data + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : '<span>' + initials + '</span>'}
             </div>
             <div class="case-header-info">
               <h3>${c.user_name || 'Unknown'}</h3>
-              <span>${c.case_number || 'Case #' + c.id} · ${c.subject}</span>
+              <span>${c.case_number || 'Case #' + c.id} · ${c.subject || ''}</span>
             </div>
           </div>
           <div class="case-actions">
-            ${!isClosed ? `<button class="case-action-btn close-btn" onclick="closeCase(${c.id})">🔒 Close Case</button>` : `<span style="font-size:12px;color:var(--txt3)">Closed</span>`}
+            ${ME?.role === 'superadmin' && !isClosed ? '<button class="case-action-btn close-btn" onclick="closeCase(' + c.id + ')">🔒 Close</button>' : ''}
+            ${isClosed ? '<span style="font-size:12px;color:var(--txt3)">Closed</span>' : ''}
           </div>
         </div>
         <div class="case-messages" id="case-messages"></div>
@@ -305,9 +433,7 @@
       `;
 
       await loadCaseMessages(caseId);
-      // Mark as read
       try { await authFetch('/api/cases/' + caseId + '/read', {method:'POST'}); } catch {}
-      // Poll
       if (POLL_TIMER) clearInterval(POLL_TIMER);
       POLL_TIMER = setInterval(() => { if (ACTIVE_CASE) loadCaseMessages(ACTIVE_CASE.id); }, 5000);
     }
@@ -324,13 +450,13 @@
           msgs.innerHTML = data.messages.map(m => {
             const isMe = m.sender_name === ME.username;
             const isSystem = m.message_type === 'system';
-            if (isSystem) return `<div class="msg-bubble system">${m.message}</div>`;
+            if (isSystem) return '<div class="msg-bubble system">' + m.message + '</div>';
             const ts = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-            return `<div class="msg-bubble ${isMe ? 'user' : 'other'}">
-              <div class="msg-sender">${isMe ? 'You' : m.sender_name}</div>
-              ${m.message}
-              <div class="msg-time">${ts}</div>
-            </div>`;
+            return '<div class="msg-bubble ' + (isMe ? 'user' : 'other') + '">' +
+              '<div class="msg-sender">' + (isMe ? 'You' : m.sender_name) + '</div>' +
+              m.message +
+              '<div class="msg-time">' + ts + '</div>' +
+            '</div>';
           }).join('');
         }
         msgs.scrollTop = msgs.scrollHeight;
@@ -349,6 +475,7 @@
           body: JSON.stringify({message: msg})
         });
         await loadCaseMessages(ACTIVE_CASE.id);
+        await loadCases();
       } catch(e) { alert('Failed: ' + e.message); }
     }
 
@@ -364,16 +491,37 @@
       } catch(e) { alert('Failed: ' + e.message); }
     }
 
-    function showNewCase() {
-      const subject = prompt('Enter case subject:');
-      if (!subject) return;
-      authFetch('/api/complaints', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({subject})
-      }).then(async d => {
+    // ── New case modal (superadmin only) ──
+    async function showNewCaseModal() {
+      document.getElementById('new-case-modal').classList.add('show');
+      document.getElementById('new-case-subject').value = '';
+      const sel = document.getElementById('new-case-user');
+      sel.innerHTML = '<option value="">Select a user…</option>';
+      try {
+        const data = await authFetch('/api/auth/users');
+        if (data.users) {
+          sel.innerHTML += data.users.filter(u => u.id !== ME.id).map(u =>
+            '<option value="' + u.id + '">' + u.username + ' (' + u.role + ')</option>'
+          ).join('');
+        }
+      } catch(e) { console.error(e); }
+    }
+    function closeNewCaseModal() {
+      document.getElementById('new-case-modal').classList.remove('show');
+    }
+    async function createNewCase() {
+      const subject = document.getElementById('new-case-subject').value.trim();
+      if (!subject) { toast('Enter a subject', 'err'); return; }
+      try {
+        const data = await authFetch('/api/complaints', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({subject})
+        });
+        closeNewCaseModal();
+        toast('Conversation started!', 'ok');
         await loadCases();
-        openCase(d.complaint.id);
-      }).catch(e => alert('Failed: ' + e.message));
+        openCase(data.complaint.id);
+      } catch(e) { toast('Failed: ' + e.message, 'err'); }
     }
 
     // Filter buttons

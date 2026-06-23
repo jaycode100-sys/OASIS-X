@@ -159,6 +159,18 @@ async function fetchUnreadCount() {
 }
 
 /* ── Auth check ────────────────────────────────────────────────── */
+let _sessionTimer = null;
+function startSessionTimer() {
+  if (_sessionTimer) clearTimeout(_sessionTimer);
+  _sessionTimer = setTimeout(() => {
+    setToken(null);
+    window.location.href = '/static/login.html';
+  }, 3 * 60 * 1000); // 3 minutes
+}
+/* Reset timer on any user activity */
+['click','keydown','mousemove','touchstart'].forEach(evt => {
+  document.addEventListener(evt, () => { if (getToken()) startSessionTimer(); }, {passive:true});
+});
 async function checkAuth() {
   const token = getToken();
   if (!token) {
@@ -175,6 +187,7 @@ async function checkAuth() {
     }
     try { applyTheme(S.user.profile?.theme || localStorage.getItem('oasis-theme') || 'dark'); } catch {}
     try { updateProfileUI(); } catch {}
+    startSessionTimer();
     afterAuth();
   } catch (e) {
     setToken(null);
@@ -1234,7 +1247,7 @@ function afterAuth() {
   });
   document.getElementById('dropdown-docs').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
-    window.open('/static/blog.html', '_blank');
+    window.location.href = '/static/blog.html';
   });
   document.getElementById('dropdown-support').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
@@ -1500,7 +1513,18 @@ function toggleComplaintPanel() {
   if (fab) fab.classList.toggle('panel-open', !p.classList.contains('hidden'));
   if (!p.classList.contains('hidden')) {
     loadCasesList();
-    if (S.user?.role === 'superadmin') loadUserDropdown();
+    if (S.user?.role === 'superadmin') {
+      loadUserDropdown();
+      const casesBtn = document.getElementById('cases-link-btn');
+      if (casesBtn) casesBtn.style.display = '';
+      const newBtn = document.getElementById('complaint-new-btn');
+      if (newBtn) newBtn.style.display = '';
+    } else {
+      const casesBtn = document.getElementById('cases-link-btn');
+      if (casesBtn) casesBtn.style.display = 'none';
+      const newBtn = document.getElementById('complaint-new-btn');
+      if (newBtn) newBtn.style.display = 'none';
+    }
   } else {
     if (_casePollTimer) { clearInterval(_casePollTimer); _casePollTimer = null; }
     closeCaseThread();
@@ -1702,13 +1726,31 @@ async function createComplaint() {
 }
 
 async function sendComplaintMessage() {
-  if (!_activeCaseId) {
-    toast('Open a conversation first', 'err');
-    return;
-  }
   const inp = document.getElementById('complaint-input');
   const msg = inp.value.trim();
   if (!msg) return;
+
+  // If no active case, auto-create one (for regular users messaging admin)
+  if (!_activeCaseId) {
+    try {
+      const data = await authFetch('/api/complaints', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({subject: 'New conversation'})
+      });
+      _activeCaseId = data.complaint.id;
+      await loadCasesList();
+      // Open the newly created case
+      const thread = document.getElementById('case-thread');
+      const list = document.getElementById('cases-list');
+      if (thread) thread.style.display = 'flex';
+      if (list) list.style.maxHeight = '160px';
+    } catch(e) {
+      toast('Failed to start conversation: ' + e.message, 'err');
+      return;
+    }
+  }
+
   inp.value = '';
   try {
     await authFetch(`/api/complaints/${_activeCaseId}/messages`, {
