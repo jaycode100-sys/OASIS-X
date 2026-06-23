@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="icon" type="image/png" href="/static/oasis.png" />
-  <link rel="stylesheet" href="/static/style.css?v=19" />
+  <link rel="stylesheet" href="/static/style.css?v=22" />
 </head>
 <body class="auth-loading">
 
@@ -44,20 +44,53 @@
       <span class="profile-greeting" id="profile-greeting">Hi, user</span>
       <span class="profile-arrow">▾</span>
       <div class="profile-dropdown hidden" id="profile-dropdown">
-        <div class="dropdown-hdr">
+        <div class="dropdown-avatar-section">
           <div class="dropdown-avatar-wrap">
             <div class="dropdown-avatar" id="dropdown-avatar">?</div>
-            <label class="avatar-upload-btn" id="avatar-upload-label" title="Change photo">📷</label>
-            <input type="file" id="avatar-upload-input" accept="image/*" hidden />
           </div>
-          <div class="dropdown-info">
-            <div class="dropdown-name" id="dropdown-name">user</div>
-            <div class="dropdown-role-badge" id="dropdown-role-badge">User</div>
+          <div class="dropdown-username" id="dropdown-username">user</div>
+          <div class="dropdown-role-badge" id="dropdown-role-badge">User</div>
+        </div>
+        <div class="dropdown-menu">
+          <div class="dropdown-row" id="dropdown-edit-profile" title="Manage your account and profile photo">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Account Settings
+          </div>
+          <div class="dropdown-row" id="dropdown-settings" title="Configure workspace preferences">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Workspace Settings
+          </div>
+          <div class="dropdown-row" id="dropdown-usage" title="View resource usage and limits">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            Project Usage
           </div>
         </div>
-        <div class="dropdown-body">
-          <div class="dropdown-row" id="dropdown-edit-profile"><span>✏️</span> Edit Full Profile</div>
-          <div class="dropdown-row" id="dropdown-logout"><span>🚪</span> Sign Out</div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-menu">
+          <div class="dropdown-row" id="dropdown-docs" title="Open project documentation">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            Documentation
+          </div>
+          <div class="dropdown-row" id="dropdown-support" title="Get help or report an issue">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            Support
+          </div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-footer">
+          <label class="theme-toggle-row" title="Toggle light or dark theme">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <span class="theme-toggle-text">Light Theme</span>
+            <input type="checkbox" id="theme-switch-dropdown" class="theme-switch-input" />
+            <span class="theme-switch-slider"></span>
+          </label>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-menu">
+          <div class="dropdown-row dropdown-row--danger" id="dropdown-logout" title="Sign out of your account">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Sign Out
+          </div>
         </div>
       </div>
     </div>
@@ -123,6 +156,28 @@
     <div class="sidebar-section">
       <p class="sidebar-label">City Profile</p>
       <button class="outline-btn" id="city-profile-btn">NCC BASELINE & INFO</button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Simulation</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
+        <span style="font-size:12px;color:var(--txt2);">Real Fibre Lines</span>
+        <label class="sim-toggle" title="Toggle real fibre line simulation">
+          <input type="checkbox" id="sim-toggle" />
+          <span class="sim-toggle-slider"></span>
+        </label>
+      </div>
+      <div id="sim-coming-soon" style="display:none;text-align:center;padding:12px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;margin-top:8px;">
+        <div style="font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;animation:comingSoonPulse 2s ease-in-out infinite;">Feature Coming Soon</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:4px;">Real fibre line monitoring will be available in the next release</div>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="run-btn" id="auto-btn" style="font-size:12px;padding:8px;" title="Auto">
+          <span class="run-icon">⚡</span> Auto
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -247,6 +302,7 @@
       <div class="summary-card hidden" id="summary-card">
         <div class="summary-header">
           <span class="badge" id="summary-source-badge">—</span>
+          <button class="send-summary-btn" id="send-summary-btn" title="Send summary to Telegram / WhatsApp">📤 Send to Phone</button>
         </div>
         <div class="summary-body" id="summary-body"></div>
       </div>
@@ -325,15 +381,15 @@
         <div id="user-modal-body">
           <form id="user-add-form" style="display:flex;flex-direction:column;gap:14px">
             <div class="form-group">
-              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Username</label>
+              <label for="user-form-username" style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Username</label>
               <input type="text" id="user-form-username" required style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none" />
             </div>
             <div class="form-group">
-              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Password</label>
+              <label for="user-form-password" style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Password</label>
               <input type="password" id="user-form-password" required style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none" />
             </div>
             <div class="form-group">
-              <label style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Role</label>
+              <label for="user-form-role" style="font-size:12px;color:var(--txt2);display:block;margin-bottom:4px">Role</label>
               <select id="user-form-role" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;outline:none">
                 <option value="user">User</option>
                 <option value="superadmin">Superadmin</option>
@@ -418,7 +474,11 @@
         </div>
         <div id="profile-modal-body">
           <div class="profile-user-card">
-            <div class="profile-avatar" id="profile-avatar">👤</div>
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar" id="profile-avatar">👤</div>
+              <label class="avatar-upload-btn" for="avatar-upload-input" title="Change profile photo">📷</label>
+              <input type="file" id="avatar-upload-input" accept="image/*" hidden />
+            </div>
             <div class="profile-info">
               <div class="profile-name" id="profile-name">—</div>
               <div class="profile-role" id="profile-role">—</div>
@@ -443,6 +503,18 @@
               <span>Avatar Colour</span>
               <input type="color" id="profile-avatar-color" value="#FF9E00" class="profile-color" />
             </div>
+          </div>
+          <div class="profile-section">
+            <div class="profile-section-title">Contact Information</div>
+            <div class="profile-row">
+              <span>Telegram</span>
+              <input type="text" id="profile-telegram" class="profile-input" placeholder="@username" />
+            </div>
+            <div class="profile-row">
+              <span>WhatsApp</span>
+              <input type="text" id="profile-whatsapp" class="profile-input" placeholder="+234..." />
+            </div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:8px;">Required for incident alerts and daily summaries</div>
           </div>
           <div class="profile-section">
             <div class="profile-section-title">My Activity</div>
@@ -490,7 +562,7 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
 </div>
 
 <!-- COMPLAINT PANEL -->
-<div class="chat-panel hidden" id="complaint-panel" style="right:90px">
+<div class="chat-panel hidden" id="complaint-panel">
   <div class="chat-header">
     <div class="chat-hdr-left">
       <span style="font-size:18px">📞</span>
@@ -550,6 +622,6 @@ You can ask me about the telemetry, charts, or NCC compliance!</div>
 <!-- TOAST -->
 <div id="toast-container"></div>
 
-  <script src="/static/app.js?v=27"></script>
+  <script src="/static/app.js?v=34"></script>
 </body>
 </html>

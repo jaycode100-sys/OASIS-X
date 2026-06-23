@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OASIS-X — Autonomous Fibre Fault Healing System</title>
+  <meta name="description" content="Real-time autonomous optical fibre network monitoring and fault healing for Nigerian networks" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/static/oasis.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #060f1a; --bg2: #0b1a2e; --bg3: #10233d;
+      --border: #1a3450; --txt: #e0edf8; --txt2: #7090b0; --txt3: #3d5a7a;
+      --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
+      --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--txt); font-family: var(--font); overflow-x: hidden; }
+    
+    /* ── Water-like background ── */
+    .bg-shapes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .bg-shapes .shape {
+      position: absolute; border-radius: 50%; opacity: 0.15;
+      background: var(--bg2); border: 1px solid var(--border);
+    }
+    .shape-1 {
+      width: 600px; height: 600px; top: -15%; left: -10%;
+      animation: drift1 25s ease-in-out infinite alternate;
+      background: radial-gradient(circle at 30% 30%, var(--bg3), transparent);
+      border-radius: 42% 58% 65% 35% / 48% 52% 48% 52%;
+    }
+    .shape-2 {
+      width: 450px; height: 450px; bottom: -15%; right: -8%;
+      animation: drift2 30s ease-in-out infinite alternate;
+      background: radial-gradient(circle at 70% 70%, var(--bg3), transparent);
+      border-radius: 55% 45% 38% 62% / 52% 58% 42% 48%;
+    }
+    .shape-3 {
+      width: 300px; height: 300px; top: 50%; left: 10%;
+      animation: drift3 22s ease-in-out infinite alternate;
+      background: radial-gradient(circle at 50% 50%, var(--border), transparent);
+      border-radius: 62% 38% 48% 52% / 38% 55% 45% 62%;
+      opacity: 0.08;
+    }
+    @keyframes drift1 {
+      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+      50%  { transform: translate(40px, 30px) rotate(8deg) scale(1.03); }
+      100% { transform: translate(80px, 50px) rotate(15deg) scale(1.06); }
+    }
+    @keyframes drift2 {
+      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+      50%  { transform: translate(-35px, -25px) rotate(-6deg) scale(1.04); }
+      100% { transform: translate(-70px, -50px) rotate(-12deg) scale(1.08); }
+    }
+    @keyframes drift3 {
+      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+      50%  { transform: translate(25px, -15px) rotate(10deg) scale(1.05); }
+      100% { transform: translate(50px, -30px) rotate(20deg) scale(1.1); }
+    }
+
+    /* ── Header ── */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 70px;
+      background: rgba(6,15,26,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .header-logo img { width: 36px; height: 36px; }
+    .header-logo-text { font-size: 18px; font-weight: 800; color: var(--accent); }
+    .header-nav { display: flex; align-items: center; gap: 24px; }
+    .header-nav a { color: var(--txt2); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .header-nav a:hover { color: var(--txt); }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .btn {
+      padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: all 0.2s; border: none;
+    }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--txt2); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary { background: var(--accent); color: #060f1a; }
+    .btn-primary:hover { opacity: 0.85; box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; z-index: 1;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 120px 24px 80px;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid rgba(0,255,136,0.2);
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .hero-title {
+      font-size: clamp(36px, 6vw, 72px); font-weight: 800;
+      line-height: 1.1; margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--txt) 0%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-subtitle {
+      font-size: 18px; color: var(--txt2); max-width: 600px;
+      line-height: 1.6; margin-bottom: 40px;
+    }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .hero-actions .btn { padding: 14px 32px; font-size: 16px; }
+
+    /* ── Features ── */
+    .features {
+      position: relative; z-index: 1;
+      padding: 80px 24px; max-width: 1200px; margin: 0 auto;
+    }
+    .features-title {
+      text-align: center; font-size: 14px; font-weight: 700;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .features-heading {
+      text-align: center; font-size: 32px; font-weight: 800;
+      color: var(--txt); margin-bottom: 48px;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: rgba(11,26,46,0.6); backdrop-filter: blur(8px);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 32px; transition: all 0.3s;
+    }
+    .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .feature-icon { font-size: 40px; margin-bottom: 16px; }
+    .feature-title { font-size: 18px; font-weight: 700; color: var(--txt); margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: var(--txt2); line-height: 1.6; }
+
+    /* ── Stats ── */
+    .stats {
+      position: relative; z-index: 1;
+      padding: 80px 24px; max-width: 1000px; margin: 0 auto;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+      text-align: center;
+    }
+    .stat-value { font-size: 36px; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+    .stat-label { font-size: 13px; color: var(--txt2); margin-top: 4px; }
+
+    /* ── Footer ── */
+    .footer {
+      position: relative; z-index: 1;
+      padding: 40px 24px; text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--txt3);
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 768px) {
+      .header { padding: 0 16px; }
+      .header-nav { display: none; }
+      .hero { padding: 100px 16px 60px; }
+      .hero-subtitle { font-size: 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+
+  <header class="header">
+    <a href="/" class="header-logo">
+      <img src="/static/oasis.png" alt="OASIS-X" />
+      <span class="header-logo-text">OASIS-X</span>
+    </a>
+    <nav class="header-nav">
+      <a href="#features">Features</a>
+      <a href="#stats">Impact</a>
+      <a href="mailto:joshuaolorundami@mtu.edu.ng">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="/static/login.html" class="btn btn-outline">Sign In</a>
+      <a href="/static/signup.html" class="btn btn-primary">Get Started</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-badge">⚡ Autonomous Network Healing</div>
+    <h1 class="hero-title">The Self-Healing Nervous System for Dark Fibre</h1>
+    <p class="hero-subtitle">
+      OASIS-X monitors Nigerian optical fibre networks in real-time, detects faults before they cascade,
+      and autonomously initiates healing protocols — powered by AI and NCC QoS compliance standards.
+    </p>
+    <div class="hero-actions">
+      <a href="/static/signup.html" class="btn btn-primary">Start Monitoring Free</a>
+      <a href="#features" class="btn btn-outline">Learn More</a>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="features-title">Capabilities</div>
+    <h2 class="features-heading">Built for Nigerian Networks</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <div class="feature-title">Real-Time Monitoring</div>
+        <div class="feature-desc">Continuous OSNR, BER, and latency tracking across Lagos, Abuja, Port Harcourt, and Kano with NCC QoS baseline comparison.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-title">AI Fault Diagnosis</div>
+        <div class="feature-desc">LLM-powered root cause analysis with confidence scoring, urgency classification, and actionable repair recommendations.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-title">Autonomous Healing</div>
+        <div class="feature-desc">Decision engine maps network states to corrective actions — automatically escalating from DEGRADING to CRITICAL responses.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌪️</div>
+        <div class="feature-title">Environmental Modeling</div>
+        <div class="feature-desc">Simulates harmattan dust, rain attenuation, generator failures, and peak congestion patterns specific to Nigerian conditions.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">NCC Compliance</div>
+        <div class="feature-desc">Automated compliance reporting against Nigerian Communications Commission Quality of Service standards for ISPs.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <div class="feature-title">Digital Twin</div>
+        <div class="feature-desc">Live network topology visualization showing cable routes, node health, and active fault propagation across the infrastructure.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats" id="stats">
+    <div class="stats-grid">
+      <div>
+        <div class="stat-value">4</div>
+        <div class="stat-label">Nigerian Cities Covered</div>
+      </div>
+      <div>
+        <div class="stat-value">5</div>
+        <div class="stat-label">Fault Types Modeled</div>
+      </div>
+      <div>
+        <div class="stat-value">NCC</div>
+        <div class="stat-label">QoS Compliance Ready</div>
+      </div>
+      <div>
+        <div class="stat-value">24/7</div>
+        <div class="stat-label">Autonomous Monitoring</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>OASIS-X Autonomous Fibre Fault Healing System &mdash; powered by <a href="#">Swift Solutions</a></p>
+    <p style="margin-top:8px">Mountain Top University, Km. 12, Lagos-Ibadan Expressway, Ogun State</p>
+  </footer>
+</body>
+</html>

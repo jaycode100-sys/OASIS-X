@@ -1,7 +1,13 @@
 /* ── Auth helpers ──────────────────────────────────────────────── */
 function getToken() { return localStorage.getItem('token'); }
 
-function setToken(t) { if(t) localStorage.setItem('token', t); else localStorage.removeItem('token'); }
+function setToken(t) { 
+  if(t) { 
+    localStorage.setItem('token', t); 
+  } else { 
+    localStorage.removeItem('token');
+  } 
+}
 
 async function authFetch(url, opts={}, ms=60000) {
   const token = getToken();
@@ -9,26 +15,17 @@ async function authFetch(url, opts={}, ms=60000) {
     opts.headers = { ...opts.headers, 'Authorization': `Bearer ${token}` };
   }
   const ctrl = new AbortController();
-  const id = setTimeout(() => {
-    console.warn('[AUTHFETCH] Timeout after', ms/1000 + 's for', url);
-    ctrl.abort();
-  }, ms);
+  const id = setTimeout(() => ctrl.abort(), ms);
   try {
     const r = await fetch(url, { ...opts, signal: ctrl.signal });
     clearTimeout(id);
     if (r.status === 401) {
-      console.warn('[AUTHFETCH] 401 — session expired, redirecting');
-      setToken(null);
-      window.location.href = '/login';
       throw new Error('Session expired');
     }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   } catch(e) {
     clearTimeout(id);
-    if (e.name === 'AbortError') {
-      console.error('[AUTHFETCH] ABORTED by AbortController — server took >', ms/1000 + 's');
-    }
     throw e;
   }
 }
@@ -110,7 +107,7 @@ function updateClock() {
 async function checkAuth() {
   const token = getToken();
   if (!token) {
-    window.location.href = '/login';
+    window.location.href = '/static/login.html';
     return;
   }
   try {
@@ -118,18 +115,15 @@ async function checkAuth() {
     document.body.className = 'auth-ready';
     document.getElementById('header').style.display = '';
     document.querySelector('.layout').style.display = '';
-    // Show superadmin-only UI
     if (S.user.role === 'superadmin') {
       document.getElementById('user-mgmt-section').classList.remove('hidden');
     }
-    // Apply saved theme from profile
-    const theme = S.user.profile?.theme || localStorage.getItem('oasis-theme') || 'dark';
-    applyTheme(theme);
-    updateProfileUI();
+    try { applyTheme(S.user.profile?.theme || localStorage.getItem('oasis-theme') || 'dark'); } catch {}
+    try { updateProfileUI(); } catch {}
     afterAuth();
-  } catch {
+  } catch (e) {
     setToken(null);
-    window.location.href = '/login';
+    window.location.href = '/static/login.html';
   }
 }
 
@@ -390,6 +384,18 @@ function updateTable(rows) {
 async function runPipeline() {
   const btn = document.getElementById('run-btn');
   btn.classList.add('loading'); btn.textContent = '⏳ Running…';
+  
+  // Close sidebar on mobile
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    overlay.classList.add('hidden');
+  }
+  
+  // Show pipeline running toast
+  toast('Pipeline running...', 'inf');
+  
   try {
     const d = await api.run(S.city, S.season, S.n);
     const sum = d.summary||{};
@@ -461,6 +467,58 @@ async function diagnoseRow() {
 }
 
 /* ── Fault event injection with feedback ────────────────────────── */
+
+/* ── Send Summary to Phone ────────────────────────────────────── */
+async function sendSummaryToPhone() {
+  const btn = document.getElementById('send-summary-btn');
+  if (!btn || btn.classList.contains('sending')) return;
+
+  const sum = window._lastSummary;
+  if (!sum || !sum.total_records) {
+    toast('Run the pipeline first to generate a summary', 'err');
+    return;
+  }
+
+  btn.classList.add('sending');
+  btn.textContent = '⏳ Sending...';
+
+  try {
+    const result = await authFetch('/api/notifications/send-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        city: S.city || 'Lagos',
+        summary_data: {
+          total_records: sum.total_records,
+          state_distribution: sum.state_distribution || {},
+          ncc_compliance: sum.ncc_compliance || {},
+          top_issues: sum.top_issues || [],
+        }
+      })
+    }, 30000);
+
+    const sent = result.sent || {};
+    const channels = [];
+    if (sent.telegram) channels.push('Telegram');
+    if (sent.whatsapp) channels.push('WhatsApp');
+
+    if (channels.length) {
+      toast('Summary sent to ' + channels.join(' & '), 'ok');
+    } else {
+      toast('No channels configured. Set Telegram/WhatsApp in Profile.', 'err');
+    }
+  } catch (e) {
+    const msg = e.message || 'Failed to send';
+    if (msg.includes('400') || msg.includes('No Telegram')) {
+      toast('Save your Telegram/WhatsApp in Profile → Contact Information', 'err');
+    } else {
+      toast('Send failed: ' + msg, 'err');
+    }
+  } finally {
+    btn.classList.remove('sending');
+    btn.textContent = '📤 Send to Phone';
+  }
+}
 async function injectEvent(evType, btn) {
   btn.classList.add('loading', 'active');
   const orig = btn.innerHTML;
@@ -891,12 +949,6 @@ function toggleSidebar() {
   o.classList.toggle('hidden');
 }
 
-/* ── Logout ─────────────────────────────────────────────────────── */
-function logout() {
-  setToken(null);
-  window.location.href = '/login';
-}
-
 /* ── Init (after auth check) ──────────────────────────────────── */
 function afterAuth() {
   try {
@@ -931,6 +983,7 @@ function afterAuth() {
 
   // Diagnose button
   document.getElementById('diag-btn').addEventListener('click', diagnoseRow);
+  document.getElementById('send-summary-btn').addEventListener('click', sendSummaryToPhone);
 
   // Row index input
   document.getElementById('row-idx').addEventListener('change', e => { S.rowIdx=+e.target.value; });
@@ -942,6 +995,28 @@ function afterAuth() {
   document.getElementById('city-profile-btn').addEventListener('click', showCityProfile);
   document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
   document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.add('hidden'); });
+
+  // Simulation toggle
+  const simToggle = document.getElementById('sim-toggle');
+  const simComingSoon = document.getElementById('sim-coming-soon');
+  if (simToggle) {
+    simToggle.addEventListener('change', () => {
+      if (simToggle.checked) {
+        simComingSoon.style.display = 'block';
+        setTimeout(() => { simComingSoon.style.display = 'none'; simToggle.checked = false; }, 3000);
+      } else {
+        simComingSoon.style.display = 'none';
+      }
+    });
+  }
+
+  // Auto button
+  const autoBtn = document.getElementById('auto-btn');
+  if (autoBtn) {
+    autoBtn.addEventListener('click', () => {
+      toast('Auto mode: Pipeline will run automatically every 30 seconds', 'inf');
+    });
+  }
 
   // Export
   document.getElementById('export-btn').addEventListener('click', exportCSV);
@@ -1076,20 +1151,38 @@ function afterAuth() {
   });
 
   // ── Profile Dropdown ──
+  const profileDropdown = document.getElementById('profile-dropdown');
   document.getElementById('profile-trigger').addEventListener('click', (e) => {
     e.stopPropagation();
-    document.getElementById('profile-dropdown').classList.toggle('hidden');
+    profileDropdown.classList.toggle('hidden');
   });
+  profileDropdown.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', () => profileDropdown.classList.add('hidden'));
+
   document.getElementById('dropdown-edit-profile').addEventListener('click', () => {
-    document.getElementById('profile-dropdown').classList.add('hidden');
+    profileDropdown.classList.add('hidden');
     openProfileModal();
   });
-  document.getElementById('dropdown-logout').addEventListener('click', () => {
-    document.getElementById('profile-dropdown').classList.add('hidden');
-    logout();
+  document.getElementById('dropdown-settings').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    toast('Workspace Settings coming soon', 'info');
   });
-  document.addEventListener('click', () => {
-    document.getElementById('profile-dropdown').classList.add('hidden');
+  document.getElementById('dropdown-usage').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    toast('Project Usage coming soon', 'info');
+  });
+  document.getElementById('dropdown-docs').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    window.open('/static/blog.html', '_blank');
+  });
+  document.getElementById('dropdown-support').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    document.getElementById('complaint-toggle').click();
+  });
+  document.getElementById('dropdown-logout').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    setToken(null);
+    window.location.href = '/static/login.html';
   });
   // Avatar upload
   document.getElementById('avatar-upload-input').addEventListener('change', async (e) => {
@@ -1120,9 +1213,18 @@ function afterAuth() {
     if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
   });
   document.getElementById('profile-save-btn').addEventListener('click', saveProfile);
+  document.getElementById('theme-switch-dropdown').addEventListener('change', e => {
+    const theme = e.target.checked ? 'light' : 'dark';
+    applyTheme(theme);
+    // Sync modal switch
+    const modalSwitch = document.getElementById('theme-switch');
+    if (modalSwitch) modalSwitch.checked = e.target.checked;
+  });
   document.getElementById('theme-switch').addEventListener('change', e => {
     const theme = e.target.checked ? 'light' : 'dark';
     applyTheme(theme);
+    // Sync dropdown switch
+    document.getElementById('theme-switch-dropdown').checked = e.target.checked;
   });
 
   // ── Complaint Panel ──
@@ -1169,9 +1271,16 @@ async function openProfileModal() {
   }
 
   document.getElementById('profile-display-name').value = me.profile?.display_name || me.username || '';
-  document.getElementById('theme-switch').checked = (me.profile?.theme || 'dark') === 'light';
+  const isLight = (me.profile?.theme || 'dark') === 'light';
+  document.getElementById('theme-switch').checked = isLight;
+  document.getElementById('theme-switch-dropdown').checked = isLight;
   document.getElementById('theme-lbl').textContent = me.profile?.theme === 'light' ? 'Light' : 'Dark';
   document.getElementById('profile-avatar-color').value = me.profile?.avatar_color || '#FF9E00';
+  
+  // Populate contact fields
+  const settings = me.profile?.settings || {};
+  document.getElementById('profile-telegram').value = settings.telegram || '';
+  document.getElementById('profile-whatsapp').value = settings.whatsapp || '';
 
   // Load user's activity
   try {
@@ -1200,12 +1309,19 @@ async function saveProfile() {
     const displayName = document.getElementById('profile-display-name').value.trim();
     const theme = document.getElementById('theme-switch').checked ? 'light' : 'dark';
     const avatarColor = document.getElementById('profile-avatar-color').value;
+    const telegram = document.getElementById('profile-telegram').value.trim();
+    const whatsapp = document.getElementById('profile-whatsapp').value.trim();
+    
+    const settings = { ...(S.user.profile?.settings || {}) };
+    if (telegram) settings.telegram = telegram;
+    if (whatsapp) settings.whatsapp = whatsapp;
+    
     await authFetch('/api/profile', {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({display_name: displayName, theme, avatar_color: avatarColor})
+      body: JSON.stringify({display_name: displayName, theme, avatar_color: avatarColor, settings})
     });
-    S.user.profile = { ...(S.user.profile || {}), display_name: displayName, theme, avatar_color: avatarColor };
+    S.user.profile = { ...(S.user.profile || {}), display_name: displayName, theme, avatar_color: avatarColor, settings };
     applyTheme(theme);
     updateProfileUI();
     toast('Profile saved!', 'ok');
@@ -1233,14 +1349,21 @@ function applyTheme(theme) {
 function updateProfileUI() {
   const p = S.user?.profile || {};
   const displayName = p.display_name || S.user?.username || 'user';
+  const firstName = displayName.split(/\s/)[0];
   const avatarData = p.settings?.avatar_data;
   const color = p.avatar_color || '#FF9E00';
   const initials = getInitials(displayName);
   const role = S.user?.role || 'user';
 
+  // Set dynamic accent colour from avatar_color
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--accent2', color);
+  const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
+  document.documentElement.style.setProperty('--accent-rgb', `${r},${g},${b}`);
+
   document.getElementById('profile-trigger').title = displayName + "'s Profile";
-  document.getElementById('profile-greeting').textContent = 'Hi, ' + displayName;
-  document.getElementById('dropdown-name').textContent = displayName;
+  document.getElementById('profile-greeting').textContent = 'Hi, ' + firstName;
+  document.getElementById('dropdown-username').textContent = displayName;
   document.getElementById('dropdown-role-badge').textContent = role === 'superadmin' ? 'Superadmin' : 'User';
   document.getElementById('dropdown-role-badge').className = 'dropdown-role-badge ' + role;
 
@@ -1257,6 +1380,22 @@ function updateProfileUI() {
       el.style.background = color;
     }
   });
+
+  const triggerEl = document.getElementById('trigger-avatar');
+  if (avatarData) {
+    triggerEl.style.cursor = 'pointer';
+    triggerEl.style.border = `2px solid ${color}`;
+    triggerEl.onclick = (e) => {
+      e.stopPropagation();
+      window.location.href = avatarData;
+    };
+  } else {
+    triggerEl.style.cursor = '';
+    triggerEl.style.border = `2px solid ${color}`;
+    triggerEl.onclick = null;
+  }
+  const dropEl = document.getElementById('dropdown-avatar');
+  dropEl.style.border = `2px solid ${color}`;
 }
 
 function toBase64(file) {
@@ -1300,6 +1439,8 @@ function toggleComplaintPanel() {
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
     loadComplaints();
+  } else {
+    if (_complaintPollTimer) { clearInterval(_complaintPollTimer); _complaintPollTimer = null; }
   }
 }
 
@@ -1335,10 +1476,6 @@ async function loadComplaintMessages(complaintId) {
     const data = await authFetch(`/api/complaints/${complaintId}/messages`);
     const msgs = document.getElementById('complaint-msgs');
     msgs.innerHTML = '';
-    const complaint = await authFetch(`/api/complaints?status=open`).then(d =>
-      d.complaints?.find(c => c.id === complaintId)
-    ).catch(() => null);
-    const statusText = complaint?.status === 'closed' ? ' (Closed)' : '';
     const addMsg = (role, text) => {
       const d = document.createElement('div');
       d.className = 'chat-msg ' + role;
@@ -1376,7 +1513,7 @@ async function createComplaint() {
     document.getElementById('complaint-input').disabled = false;
     document.getElementById('complaint-send').disabled = false;
     document.getElementById('complaint-input').focus();
-    await loadComplaints();
+    await loadComplaintMessages(_activeComplaintId);
   } catch(e) {
     toast('Failed: ' + e.message, 'err');
   }

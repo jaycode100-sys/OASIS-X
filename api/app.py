@@ -74,6 +74,9 @@ def login_page():
 
 @app.get("/", include_in_schema=False)
 def home():
+    landing = __import__("os").path.join(STATIC_DIR, "landing.html")
+    if __import__("os").path.isfile(landing):
+        return FileResponse(landing)
     index = __import__("os").path.join(STATIC_DIR, "index.html")
     if __import__("os").path.isfile(index):
         return FileResponse(index)
@@ -83,6 +86,14 @@ def home():
         "docs": "/docs",
         "note": "Place index.html in static/ to serve the dashboard",
     }
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    index = __import__("os").path.join(STATIC_DIR, "index.html")
+    if __import__("os").path.isfile(index):
+        return FileResponse(index)
+    return JSONResponse(status_code=404, content={"detail": "index.html not found"})
 
 
 # ── Startup ──

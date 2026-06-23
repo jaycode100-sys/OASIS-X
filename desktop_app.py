@@ -46,7 +46,7 @@ if __name__ == "__main__":
         # OASIS-X icon; the webview window inherits it.
         webview.create_window(
             "OASIS-X",
-            f"http://127.0.0.1:{PORT}/login",
+            f"http://127.0.0.1:{PORT}/",
             width=1280,
             height=800,
             resizable=True,
@@ -54,6 +54,6 @@ if __name__ == "__main__":
         webview.start()
     except ImportError:
         print("PyWebView not installed. Install with: pip install pywebview")
-        print(f"Falling back to browser at http://127.0.0.1:{PORT}/login")
-        webbrowser.open(f"http://127.0.0.1:{PORT}/login")
+        print(f"Falling back to browser at http://127.0.0.1:{PORT}/")
+        webbrowser.open(f"http://127.0.0.1:{PORT}/")
         t.join()

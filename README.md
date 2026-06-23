@@ -14,11 +14,12 @@ Real-time autonomous optical fibre fault healing dashboard for Nigerian networks
 - **Nexus AI Chat** — Conversational LLM (technical/simple mode) with dashboard context awareness
 - **Fault Injection** — One-click fibre cut, generator failure, harmattan degradation, rain attenuation, peak congestion
 - **4-Line Summary** — Auto-generated network situation summary after every pipeline run/diagnosis
-- **Per-User Profiles** — Theme (dark/light), avatar, display name, activity feed
+- **Per-User Profiles** — Theme (dark/light), avatar, display name, activity feed, theme colour
 - **Complaint System** — Real-time user-to-agent chat with polling
 - **LLM Diagnosis** — Custom `swift-fhs` model with graceful rule-engine fallback
 - **Digital Twin** — Season-aware environmental simulation
 - **Interactive Login** — Animated geometric background blobs that morph on proximity and burst on click
+- **Telegram & WhatsApp Notifications** — Send network summaries and incident alerts directly to your phone
 
 ## Tech Stack
 
@@ -30,6 +31,7 @@ Real-time autonomous optical fibre fault healing dashboard for Nigerian networks
 | **Visualisation** | Chart.js 4.x (CDN), pure CSS dark/light themes |
 | **Database** | SQLite (per-user profiles, complaints, pipeline logs) |
 | **Auth** | JWT (python-jose + passlib/bcrypt) |
+| **Notifications** | Telegram Bot API, WhatsApp Business API |
 
 ## Quick Start
 
@@ -43,8 +45,8 @@ Real-time autonomous optical fibre fault healing dashboard for Nigerian networks
 
 ```bash
 # 1. Clone
-git clone https://github.com/jaycode100-sys/oasis-x.git
-cd oasis-x
+git clone https://github.com/jaycode100-sys/OASIS-X.git
+cd OASIS-X
 
 # 2. Virtual environment
 python -m venv venv
@@ -59,11 +61,11 @@ pip install -r requirements.txt
 # 4. Set up LLM models (optional — skip if you don't want AI features)
 ollama serve
 ollama pull llama3.2:1b
-ollama create nexus-chat -f models\.ollama\ChatModelfile
-ollama create swift-fhs -f models\.ollama\Modelfile
+ollama create nexus-chat -f models/.ollama/ChatModelfile
+ollama create swift-fhs -f models/.ollama/Modelfile
 
 # 5. Configure environment
-copy .env.example .env
+cp .env.example .env
 # Edit .env — at minimum set OASIS_SECRET_KEY
 
 # 6. Start the server
@@ -73,11 +75,7 @@ python start_server.py
 # http://localhost:8080
 ```
 
-### Docker / Railway (One-Click Deploy)
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/oasis-x)
-
-The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-config deployment. Set `OASIS_SECRET_KEY` as a Railway environment variable.
+> **Note:** The server auto-starts Ollama and ensures models are available on first run. If Ollama is not installed, the system works without LLM features (rule-engine fallback for diagnosis, offline message for chat).
 
 ## Default Credentials
 
@@ -88,18 +86,76 @@ The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-co
 
 *The login page does not display credentials. Users must know them in advance.*
 
+## Deploy to Render
+
+1. Push to GitHub
+2. Go to [Render Dashboard](https://dashboard.render.com) → **New** → **Web Service**
+3. Connect your GitHub repo `jaycode100-sys/OASIS-X`
+4. Configure:
+   - **Name:** `oasis-x`
+   - **Runtime:** Python
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python start_server.py`
+5. Add environment variables:
+   - `OASIS_SECRET_KEY` — a random secret string (required for JWT)
+   - `PORT` — `8080` (or leave default)
+6. Click **Create Web Service**
+7. Your dashboard is live at `https://<name>.onrender.com`
+
+### Optional: Render Ollama Sidecar
+
+For full AI features (Nexus chat, LLM diagnosis), deploy Ollama as a separate Render service:
+
+1. Create a **Background Worker** service on Render
+2. Use the `ollama/ollama:latest` Docker image
+3. Add environment variable: `OLLAMA_BASE_URL=http://<ollama-service>.internal:11434` to your main web service
+4. After both services start, open a shell in the Ollama worker and run:
+   ```bash
+   ollama pull llama3.2:1b
+   ollama create nexus-chat -f models/.ollama/ChatModelfile
+   ollama create swift-fhs -f models/.ollama/Modelfile
+   ```
+
+## Alternative Deployments
+
+### Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/oasis-x)
+
+The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-config deployment. Set `OASIS_SECRET_KEY` as a Railway environment variable.
+
+### Docker
+
+```bash
+docker-compose up --build
+```
+
+The `docker-compose.yml` includes both the app and an Ollama sidecar with GPU support.
+
+### Fly.io
+
+```bash
+fly launch
+fly deploy
+```
+
+See `fly.toml` for the Ollama sidecar configuration.
+
 ## API Endpoints
 
 ### Health & Status
 - `GET /api/status` — Health check
+- `GET /api/llm-status` — Ollama/model availability
 
 ### Authentication
 - `POST /api/auth/login` — Login (returns JWT)
+- `POST /api/auth/signup` — Self-registration
 - `GET /api/auth/me` — Current user + profile
 
 ### Pipeline
 - `POST /api/run` — Run the telemetry pipeline
-- `GET /api/runs` — List pipeline runs
+- `GET /api/logs` — List pipeline logs
+- `POST /api/logs` — Save a pipeline run
 - `GET /api/logs/{run_id}` — Get specific run
 - `DELETE /api/logs/{run_id}` — Delete a run
 
@@ -117,7 +173,7 @@ The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-co
 
 ### Profile
 - `GET /api/profile` — Get user profile
-- `PUT /api/profile` — Update profile (theme, avatar, display name)
+- `PUT /api/profile` — Update profile (theme, avatar, display name, contacts)
 
 ### Complaints
 - `POST /api/complaints` — Create complaint
@@ -132,6 +188,14 @@ The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-co
 
 ### Fault Injection
 - `POST /api/simulate/event/{event_type}` — Inject fault event
+
+### Notifications
+- `POST /api/notifications/send-summary` — Send dashboard summary to saved contacts
+- `POST /api/notifications/telegram` — Send raw Telegram message
+- `POST /api/notifications/whatsapp` — Send raw WhatsApp message
+- `POST /api/notifications/incident` — Send incident alert
+- `POST /api/notifications/daily-summary` — Send daily network summary
+- `GET /api/notifications/status` — Check channel availability
 
 ## LLM Models
 
@@ -150,7 +214,8 @@ The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-co
 ├── api/
 │   ├── app.py              # FastAPI app, CORS, static mount
 │   ├── routes.py           # All API endpoints
-│   └── auth.py             # JWT auth + seed users
+│   ├── auth.py             # JWT auth + seed users
+│   └── notifications.py    # Telegram & WhatsApp integration
 ├── data/
 │   └── database.py         # SQLite wrapper (profiles, complaints, logs)
 ├── models/
@@ -167,31 +232,41 @@ The project includes `Procfile`, `railway.json`, and `nixpacks.toml` for zero-co
 ├── static/
 │   ├── index.html          # Dashboard
 │   ├── login.html          # Login page
+│   ├── signup.html         # Registration page
+│   ├── landing.html        # Public landing page
+│   ├── blog.html           # Documentation blog
 │   ├── style.css           # Dark/light theme CSS
 │   └── app.js              # Frontend logic
-├── start_server.py         # Server launcher
-├── simulator.py            # CLI simulation runner
-├── main.py                 # Entry point for headless simulation
-├── Procfile                # Railway start command
-├── railway.json            # Railway deployment config
-├── nixpacks.toml           # Nixpacks build config
+├── start_server.py         # Server launcher (auto-starts Ollama)
+├── config.py               # Centralised pydantic-settings config
+├── desktop_app.py          # Standalone desktop packaging
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Container build
+├── docker-compose.yml      # Multi-service setup (app + Ollama)
+├── Procfile                # Railway/Render start command
+├── render.yaml             # Render deployment config
+├── fly.toml                # Fly.io deployment config
 ├── .env.example            # Documented environment variables
-└── requirements.txt        # Python dependencies
+└── README.md               # This file
 ```
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `8080` | Server port (Railway auto-sets this) |
+| `PORT` | `8080` | Server port |
 | `HOST` | `0.0.0.0` | Server bind address |
 | `OASIS_SECRET_KEY` | — | **REQUIRED**: JWT signing key |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
 | `SWIFT_LLM_MODEL` | `swift-fhs` | Diagnosis model name |
 | `CHAT_MODEL` | `nexus-chat` | Chat model name |
-| `OLLAMA_TIMEOUT` | `120` | Ollama API timeout (seconds) |
+| `OLLAMA_TIMEOUT` | `180` | Ollama API timeout (seconds) |
 | `OASIS_DB_DIR` | `data` | Database directory |
 | `OASIS_DB_PATH` | `data/oasis.db` | Database file path |
+| `TELEGRAM_BOT_TOKEN` | — | Telegram Bot API token |
+| `TELEGRAM_CHAT_ID` | — | Default Telegram chat ID |
+| `WHATSAPP_PHONE_NUMBER_ID` | — | WhatsApp Business phone number ID |
+| `WHATSAPP_ACCESS_TOKEN` | — | WhatsApp Business API access token |
 
 ## Desktop Application
 
@@ -199,19 +274,10 @@ To package OASIS-X as a standalone desktop app:
 
 ```bash
 pip install pyinstaller pywebview
-python build_desktop.py
+python desktop_app.py
 ```
 
 This bundles the Python server + web frontend into a single `.exe` with an embedded webview window (no browser needed). Output is in `dist/OASIS-X/`.
-
-## Railway Deployment
-
-1. Push to GitHub
-2. Create a new Railway project from your repo
-3. Add `OASIS_SECRET_KEY` as an environment variable
-4. Railway auto-detects `nixpacks.toml` and builds
-5. Health check at `/api/status`
-6. Your dashboard is live at `https://<project>.railway.app`
 
 ## License
 

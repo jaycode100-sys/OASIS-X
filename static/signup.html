@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OASIS-X — Login</title>
-  <meta name="description" content="Login to OASIS-X Autonomous Fibre Fault Healing System" />
+  <title>OASIS-X — Create Account</title>
+  <meta name="description" content="Create an account for OASIS-X Autonomous Fibre Fault Healing System" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/static/oasis.png" />
@@ -112,7 +112,6 @@
       100% { transform: translate(0, 0) scale(1); opacity: 0.3; border-radius: 50%; }
     }
 
-    /* ── Disintegration particles ── */
     .particle {
       position: fixed; border-radius: 50%; pointer-events: none;
       z-index: 0; will-change: transform, opacity;
@@ -123,7 +122,7 @@
       100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
     }
 
-    .login-wrap { position: relative; z-index: 1; width: 100%; max-width: 400px; padding: 24px; }
+    .login-wrap { position: relative; z-index: 1; width: 100%; max-width: 420px; padding: 24px; }
     .login-card {
       background: rgba(11,26,46,0.85); backdrop-filter: blur(12px);
       border: 1px solid var(--border); border-radius: 16px;
@@ -140,7 +139,7 @@
       0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    .login-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+    .login-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
     .login-logo img { width: 42px; height: 42px; position: relative; }
     .login-logo img.loading {
       animation: logoBrighten 1.5s ease-in-out infinite;
@@ -155,25 +154,49 @@
     .login-title { font-size: 14px; font-weight: 600; color: var(--txt2); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
     .form-group { margin-bottom: 18px; }
     .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--txt2); margin-bottom: 6px; }
-    .form-group input {
+    .form-group input, .form-group select {
       width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
       background: rgba(16,35,61,0.7); color: var(--txt); font-size: 14px; font-family: var(--font);
       outline: none; transition: border-color 0.2s;
     }
-    .form-group input:focus { border-color: var(--accent); }
+    .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+    .form-group select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237090b0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .form-group select option { background: var(--bg2); color: var(--txt); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group.optional label::after { content: ' (optional)'; color: var(--txt3); font-weight: 400; }
+    .form-group.hidden { display: none; }
+
+    .toggle-group { margin-bottom: 22px; }
+    .toggle-group label { display: block; font-size: 12px; font-weight: 500; color: var(--txt2); margin-bottom: 10px; }
+    .toggle-row {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(16,35,61,0.5); border: 1px solid var(--border); border-radius: 10px;
+      padding: 6px; position: relative;
+    }
+    .toggle-opt {
+      flex: 1; text-align: center; padding: 8px 12px; border-radius: 7px;
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.25s;
+      color: var(--txt3); user-select: none;
+    }
+    .toggle-opt.active {
+      background: var(--accent); color: #060f1a; font-weight: 600;
+    }
+
     .login-btn {
       width: 100%; padding: 12px; border-radius: 8px; border: none;
       background: var(--accent); color: #060f1a; font-size: 15px; font-weight: 700;
-      cursor: pointer; font-family: var(--font); transition: opacity 0.2s; margin-top: 8px;
+      cursor: pointer; font-family: var(--font); transition: opacity 0.2s; margin-top: 4px;
     }
     .login-btn:hover { opacity: 0.85; }
     .login-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .login-error { color: var(--red); font-size: 13px; margin-bottom: 8px; text-align: center; display: none; }
     .login-error.show { display: block; }
-    .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--txt3); }
     .login-spinner { display: none; vertical-align: middle; margin-right: 6px; }
     .login-btn.loading .login-spinner { display: inline-block; }
     .login-btn.loading .login-text { opacity: 0.6; }
+    .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--txt3); }
+    .login-footer a { color: var(--accent); text-decoration: none; }
+    .login-footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -194,73 +217,83 @@
           <div class="sub">Autonomous Fibre Fault Healing System</div>
         </div>
       </a>
-      <div class="login-title">Sign in</div>
-      <form id="login-form" autocomplete="off">
+      <div class="login-title">Create Account</div>
+      <form id="signup-form" autocomplete="off">
+        <div class="toggle-group">
+          <label>Account Type</label>
+          <div class="toggle-row" id="usage-toggle">
+            <div class="toggle-opt active" data-value="personal">Personal Use</div>
+            <div class="toggle-opt" data-value="organization">Organization</div>
+          </div>
+        </div>
+
+        <div id="personal-fields">
+          <div class="form-group">
+            <label for="fullname">Full Name</label>
+            <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required autocomplete="off" />
+          </div>
+        </div>
+
+        <div id="org-fields" class="hidden">
+          <div class="form-group">
+            <label for="orgname">Organization Name</label>
+            <input type="text" id="orgname" name="orgname" placeholder="Enter organization name" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email" />
+        </div>
+
+        <div class="form-group optional hidden" id="email2-group">
+          <label for="email2">Second Email</label>
+          <input type="email" id="email2" name="email2" placeholder="Optional second email" autocomplete="email" />
+        </div>
+
         <div class="form-group">
           <label for="username">Username</label>
-          <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
+          <input type="text" id="username" name="username" placeholder="Choose a username" required autocomplete="off" />
         </div>
+
+        <div class="form-group">
+          <label for="company-link">Company Link</label>
+          <select id="company-link" name="company-link">
+            <option value="">No company affiliation</option>
+            <option value="mtu">Mountain Top University</option>
+            <option value="mtn">MTN Nigeria</option>
+            <option value="globacom">Glo (Globacom)</option>
+            <option value="airtel">Airtel Nigeria</option>
+            <option value="9mobile">9mobile</option>
+            <option value="ncc">NCC (Nigerian Communications Commission)</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+          <input type="password" id="password" name="password" placeholder="Create a password (min. 6 chars)" required autocomplete="new-password" />
         </div>
-        <div class="login-error" id="login-error"></div>
-        <button type="submit" class="login-btn" id="login-btn">
+        <div class="form-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" name="confirm-password" placeholder="Confirm your password" required autocomplete="new-password" />
+        </div>
+
+        <div class="login-error" id="signup-error"></div>
+        <button type="submit" class="login-btn" id="signup-btn">
           <span class="login-spinner">⏳</span>
-          <span class="login-text">Sign In</span>
+          <span class="login-text">Create Account</span>
         </button>
       </form>
       <div class="login-footer">
-        Don't have an account? <a href="/static/signup.html" style="color:var(--accent);text-decoration:none;">Create one</a>
+        Already have an account? <a href="/static/login.html">Sign in</a>
       </div>
       <div class="login-footer" style="margin-top:6px;">
-        <a href="#" id="forgot-password-link" style="color:var(--accent);text-decoration:none;">Forgot password?</a>
+        <a href="/static/login.html#forgot">Forgot password?</a>
       </div>
-      <div class="login-footer" style="margin-top:6px;">SWIFT FHS v1.0 &mdash; powered by Swift Solutions</div>
-    </div>
-  </div>
-  <!-- Forgot Password Modal -->
-  <div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:400px;width:90%;position:relative;">
-      <button onclick="document.getElementById('forgot-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--txt2);font-size:18px;cursor:pointer;">✕</button>
-      <h3 style="font-size:18px;font-weight:700;color:var(--txt);margin-bottom:8px;">Reset Password</h3>
-      <p style="font-size:13px;color:var(--txt2);margin-bottom:20px;">Enter your email address and we'll send you a link to reset your password.</p>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-size:12px;font-weight:500;color:var(--txt2);margin-bottom:6px;">Email Address</label>
-        <input type="email" id="forgot-email" placeholder="Enter your email" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(16,35,61,0.7);color:var(--txt);font-size:14px;font-family:var(--font);outline:none;" />
-      </div>
-      <div id="forgot-message" style="font-size:13px;margin-bottom:12px;display:none;"></div>
-      <button onclick="handleForgotPassword()" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#060f1a;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);">Send Reset Link</button>
     </div>
   </div>
   <script>
-    /* ── Forgot Password ── */
-    document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('forgot-modal').style.display = 'flex';
-    });
-
-    async function handleForgotPassword() {
-      const email = document.getElementById('forgot-email').value.trim();
-      const msg = document.getElementById('forgot-message');
-      if (!email) {
-        msg.textContent = 'Please enter your email address';
-        msg.style.color = 'var(--red)';
-        msg.style.display = 'block';
-        return;
-      }
-      // For demo purposes, show a success message
-      msg.textContent = 'If an account exists with this email, a password reset link has been sent. Check your inbox.';
-      msg.style.color = 'var(--accent)';
-      msg.style.display = 'block';
-      setTimeout(() => {
-        document.getElementById('forgot-modal').style.display = 'none';
-        msg.style.display = 'none';
-      }, 3000);
-    }
-  </script>
-  <script>
-    /* ── Interactive water-like blobs ── */
     const shapes = document.querySelectorAll('.bg-shapes .shape');
     const container = document.querySelector('.bg-shapes');
     const state = [];
@@ -363,26 +396,134 @@
       }
     });
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    /* ── Toggle switch logic ── */
+    const toggleOpts = document.querySelectorAll('.toggle-opt');
+    const personalFields = document.getElementById('personal-fields');
+    const orgFields = document.getElementById('org-fields');
+    const email2Group = document.getElementById('email2-group');
+    let accountType = 'personal';
+
+    function updateFormFields() {
+      if (accountType === 'personal') {
+        personalFields.classList.remove('hidden');
+        orgFields.classList.add('hidden');
+        email2Group.classList.add('hidden');
+        document.getElementById('fullname').required = true;
+        document.getElementById('orgname').required = false;
+        document.getElementById('email2').required = false;
+      } else {
+        personalFields.classList.add('hidden');
+        orgFields.classList.remove('hidden');
+        email2Group.classList.remove('hidden');
+        document.getElementById('fullname').required = false;
+        document.getElementById('orgname').required = true;
+        document.getElementById('email2').required = false;
+      }
+    }
+
+    toggleOpts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        toggleOpts.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        accountType = opt.dataset.value;
+        updateFormFields();
+      });
+    });
+
+    /* ── Email validation ── */
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    /* ── Form submission ── */
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('login-btn');
-      const err = document.getElementById('login-error');
+      const btn = document.getElementById('signup-btn');
+      const err = document.getElementById('signup-error');
       const logo = document.querySelector('.login-logo img');
+      const fullname = document.getElementById('fullname').value.trim();
+      const orgname = document.getElementById('orgname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const email2 = document.getElementById('email2').value.trim();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      if (!username || !password) { err.textContent = 'Please enter username and password'; err.classList.add('show'); return; }
+      const confirm = document.getElementById('confirm-password').value;
+      const companyLink = document.getElementById('company-link').value;
+
+      if (accountType === 'personal' && !fullname) {
+        err.textContent = 'Please enter your full name';
+        err.classList.add('show');
+        return;
+      }
+      if (accountType === 'organization' && !orgname) {
+        err.textContent = 'Please enter your organization name';
+        err.classList.add('show');
+        return;
+      }
+      if (!email) {
+        err.textContent = 'Please enter your email';
+        err.classList.add('show');
+        return;
+      }
+      if (!isValidEmail(email)) {
+        err.textContent = 'Please enter a valid email address';
+        err.classList.add('show');
+        return;
+      }
+      if (email2 && !isValidEmail(email2)) {
+        err.textContent = 'Please enter a valid second email address';
+        err.classList.add('show');
+        return;
+      }
+      if (!username) {
+        err.textContent = 'Please choose a username';
+        err.classList.add('show');
+        return;
+      }
+      if (!password || !confirm) {
+        err.textContent = 'Please fill in all fields';
+        err.classList.add('show');
+        return;
+      }
+      if (password.length < 6) {
+        err.textContent = 'Password must be at least 6 characters';
+        err.classList.add('show');
+        return;
+      }
+      if (password !== confirm) {
+        err.textContent = 'Passwords do not match';
+        err.classList.add('show');
+        return;
+      }
+
+      const role = accountType === 'organization' ? 'admin' : 'user';
+      const displayName = accountType === 'personal' ? fullname : orgname;
+
       btn.classList.add('loading');
       btn.disabled = true;
       logo.classList.add('loading');
       err.classList.remove('show');
+
       try {
-        const r = await fetch('/api/auth/login', {
+        const r = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({
+            username,
+            password,
+            role,
+            display_name: displayName,
+            email,
+            email2: email2 || null,
+            company_link: companyLink || null,
+          }),
         });
         const data = await r.json();
-        if (!r.ok) { err.textContent = data.detail || 'Login failed'; err.classList.add('show'); return; }
+        if (!r.ok) {
+          err.textContent = data.detail || 'Registration failed';
+          err.classList.add('show');
+          return;
+        }
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('_login_ts', String(Date.now()));
         window.location.href = '/dashboard';

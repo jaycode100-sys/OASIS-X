@@ -20,7 +20,7 @@ from data.database import (
     save_diagnosis, save_chat_message, get_chat_history, clear_chat_history,
     log_activity, get_activities,
     get_user_profile, update_user_profile,
-    create_complaint, get_complaints, get_complaint_messages,
+    create_complaint, get_complaint, get_complaints, get_complaint_messages,
     add_complaint_message, get_all_open_complaints, update_complaint_status,
 )
 
@@ -406,7 +406,12 @@ def list_complaints(
 ):
     """List complaints. Regular users see their own; superadmin sees all."""
     if _user["role"] == "superadmin":
-        complaints = get_complaints(user_id=None, status=status) if status else get_all_open_complaints()
+        if status == "all":
+            complaints = get_complaints(user_id=None, status=None)
+        elif status:
+            complaints = get_complaints(user_id=None, status=status)
+        else:
+            complaints = get_all_open_complaints()
     else:
         complaints = get_complaints(user_id=_user["id"], status=status)
     return {"complaints": complaints}
@@ -417,7 +422,12 @@ def get_complaint_messages_endpoint(
     complaint_id: int,
     _user: dict = Depends(get_current_user),
 ):
-    """Get messages for a complaint."""
+    """Get messages for a complaint. Only the owner or superadmin may read."""
+    c = get_complaint(complaint_id)
+    if not c:
+        raise HTTPException(404, "Complaint not found")
+    if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
+        raise HTTPException(403, detail="You do not have access to this complaint")
     msgs = get_complaint_messages(complaint_id)
     return {"messages": msgs}
 
@@ -428,11 +438,30 @@ def post_complaint_message(
     _user: dict = Depends(get_current_user),
     message: str = Body(..., embed=True),
 ):
-    """Add a message to a complaint. Superadmin auto-assigned."""
+    """Add a message to a complaint. Only the owner or superadmin may post."""
+    c = get_complaint(complaint_id)
+    if not c:
+        raise HTTPException(404, "Complaint not found")
+    if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
+        raise HTTPException(403, detail="You do not have access to this complaint")
     msg = add_complaint_message(complaint_id, _user["id"], message)
     if _user["role"] == "superadmin":
         update_complaint_status(complaint_id, "open", assigned_to=_user["id"])
     return {"message": msg}
+
+
+@router.get("/complaints/{complaint_id}")
+def get_complaint_endpoint(
+    complaint_id: int,
+    _user: dict = Depends(get_current_user),
+):
+    """Get a single complaint. Only the owner or superadmin may view."""
+    c = get_complaint(complaint_id)
+    if not c:
+        raise HTTPException(404, "Complaint not found")
+    if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
+        raise HTTPException(403, detail="You do not have access to this complaint")
+    return {"complaint": c}
 
 
 @router.post("/complaints/{complaint_id}/close")
@@ -440,7 +469,12 @@ def close_complaint(
     complaint_id: int,
     _user: dict = Depends(get_current_user),
 ):
-    """Close a complaint."""
+    """Close a complaint. Only the owner or superadmin may close."""
+    c = get_complaint(complaint_id)
+    if not c:
+        raise HTTPException(404, "Complaint not found")
+    if _user["role"] != "superadmin" and c["user_id"] != _user["id"]:
+        raise HTTPException(403, detail="You do not have access to this complaint")
     c = update_complaint_status(complaint_id, "closed")
     return {"complaint": c}
 
@@ -477,3 +511,184 @@ def list_activities(
     if _user["role"] != "superadmin":
         raise HTTPException(status_code=403, detail="Only superadmin can view all activity logs")
     return {"activities": get_activities(limit)}
+
+
+# ── Notifications ────────────────────────────────────────────────────────────────
+from api.notifications import notification_service
+from data.database import get_user_profile
+
+
+def _get_user_contacts(user: dict) -> dict:
+    """Read telegram/whatsapp from the user's profile settings."""
+    profile = get_user_profile(user["id"])
+    settings = {}
+    if profile and profile.get("settings"):
+        try:
+            settings = json.loads(profile["settings"]) if isinstance(profile["settings"], str) else profile["settings"]
+        except (json.JSONDecodeError, TypeError):
+            settings = profile["settings"] if isinstance(profile["settings"], dict) else {}
+    return {
+        "telegram": settings.get("telegram", ""),
+        "whatsapp": settings.get("whatsapp", ""),
+    }
+
+
+@router.post("/notifications/send-summary")
+async def send_dashboard_summary(
+    body: dict = Body(...),
+    _user: dict = Depends(get_current_user),
+):
+    """Send the current dashboard network summary via Telegram and/or WhatsApp.
+    Body keys (all optional — falls back to profile + live data):
+      city, summary_data (dict with total_records, state_distribution, ncc_compliance, top_issues)
+    Contact info is auto-read from the user's saved profile.
+    """
+    city = body.get("city", "Lagos")
+    summary_data = body.get("summary_data", {})
+
+    contacts = _get_user_contacts(_user)
+    telegram = contacts.get("telegram", "").lstrip("@")
+    whatsapp = contacts.get("whatsapp", "").replace(" ", "")
+
+    if not telegram and not whatsapp:
+        raise HTTPException(
+            status_code=400,
+            detail="No Telegram or WhatsApp contact saved in your profile. Go to Profile → Contact Information.",
+        )
+
+    result = await notification_service.send_daily_summary(
+        city=city,
+        summary_data=summary_data,
+        telegram_chat_id=telegram or None,
+        whatsapp_number=whatsapp or None,
+    )
+
+    log_activity(
+        act_type="notification",
+        message=f"Network summary sent for {city}",
+        html=f'Network summary sent for <strong>{city}</strong>',
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+
+    return {"sent": result}
+
+
+@router.post("/notifications/telegram")
+async def send_telegram_notification(
+    body: dict = Body(...),
+    _user: dict = Depends(get_current_user),
+):
+    """Send a Telegram notification. Auto-reads chat_id from profile if not provided."""
+    message = body.get("message", "")
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    chat_id = body.get("chat_id")
+    if not chat_id:
+        contacts = _get_user_contacts(_user)
+        chat_id = contacts.get("telegram", "").lstrip("@") or None
+
+    result = await notification_service.send_telegram(message, chat_id)
+    return {"sent": result, "channel": "telegram"}
+
+
+@router.post("/notifications/whatsapp")
+async def send_whatsapp_notification(
+    body: dict = Body(...),
+    _user: dict = Depends(get_current_user),
+):
+    """Send a WhatsApp notification. Auto-reads phone_number from profile if not provided."""
+    message = body.get("message", "")
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    phone_number = body.get("phone_number")
+    if not phone_number:
+        contacts = _get_user_contacts(_user)
+        phone_number = contacts.get("whatsapp", "").replace(" ", "") or None
+
+    result = await notification_service.send_whatsapp(message, phone_number)
+    return {"sent": result, "channel": "whatsapp"}
+
+
+@router.post("/notifications/incident")
+async def send_incident_alert(
+    body: dict = Body(...),
+    _user: dict = Depends(get_current_user),
+):
+    """Send an incident alert. Auto-reads contacts from profile."""
+    status = body.get("status", "UNKNOWN")
+    city = body.get("city", "Unknown")
+    severity = body.get("severity", "INFO")
+    summary = body.get("summary", "")
+    action = body.get("action", "")
+
+    contacts = _get_user_contacts(_user)
+    telegram_chat_id = body.get("telegram_chat_id") or contacts.get("telegram", "").lstrip("@") or None
+    whatsapp_number = body.get("whatsapp_number") or contacts.get("whatsapp", "").replace(" ", "") or None
+
+    result = await notification_service.send_incident_alert(
+        status=status,
+        city=city,
+        severity=severity,
+        summary=summary,
+        action=action,
+        telegram_chat_id=telegram_chat_id,
+        whatsapp_number=whatsapp_number,
+    )
+
+    log_activity(
+        act_type="notification",
+        message=f"Incident alert sent for {city} - {status}",
+        html=f'Incident alert sent for <strong>{city}</strong> - {status}',
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+
+    return {"sent": result}
+
+
+@router.post("/notifications/daily-summary")
+async def send_daily_summary(
+    body: dict = Body(...),
+    _user: dict = Depends(get_current_user),
+):
+    """Send daily network summary. Auto-reads contacts from profile."""
+    city = body.get("city", "Lagos")
+    summary_data = body.get("summary_data", {})
+
+    contacts = _get_user_contacts(_user)
+    telegram_chat_id = body.get("telegram_chat_id") or contacts.get("telegram", "").lstrip("@") or None
+    whatsapp_number = body.get("whatsapp_number") or contacts.get("whatsapp", "").replace(" ", "") or None
+
+    result = await notification_service.send_daily_summary(
+        city=city,
+        summary_data=summary_data,
+        telegram_chat_id=telegram_chat_id,
+        whatsapp_number=whatsapp_number,
+    )
+
+    log_activity(
+        act_type="notification",
+        message=f"Daily summary sent for {city}",
+        html=f'Daily summary sent for <strong>{city}</strong>',
+        user_id=_user["id"],
+        username=_user["username"],
+    )
+
+    return {"sent": result}
+
+
+@router.get("/notifications/status")
+async def notification_status(
+    _user: dict = Depends(get_current_user),
+):
+    """Get notification service status."""
+    contacts = _get_user_contacts(_user)
+    return {
+        "telegram_enabled": notification_service.telegram_enabled,
+        "whatsapp_enabled": notification_service.whatsapp_enabled,
+        "profile_telegram": contacts.get("telegram", ""),
+        "profile_whatsapp": contacts.get("whatsapp", ""),
+    }

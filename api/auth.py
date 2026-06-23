@@ -42,6 +42,10 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     role: str = "user"
+    display_name: str | None = None
+    email: str | None = None
+    email2: str | None = None
+    company_link: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -169,7 +173,7 @@ def register(
     body: RegisterRequest,
     _: dict = Depends(require_role("superadmin")),
 ):
-    """Create a new user. Superadmin only."""
+    """Create a new user. Superadmin only (admin panel)."""
     existing = get_user_by_username(body.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
@@ -177,6 +181,53 @@ def register(
     user = create_user(body.username, hash_password(body.password), body.role)
     create_user_profile(user["id"], user["username"])
     return {"id": user["id"], "username": user["username"], "role": user["role"]}
+
+
+@router.post("/signup", response_model=TokenResponse)
+def signup(body: RegisterRequest, request: Request = None):
+    """Public self-registration. Creates account and returns JWT."""
+    existing = get_user_by_username(body.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user = create_user(body.username, hash_password(body.password), body.role)
+    
+    # Build settings with additional signup data
+    settings = {}
+    if body.display_name:
+        settings["display_name"] = body.display_name
+    if body.email:
+        settings["email"] = body.email
+    if body.email2:
+        settings["email2"] = body.email2
+    if body.company_link:
+        settings["company_link"] = body.company_link
+    
+    create_user_profile(user["id"], body.display_name or user["username"])
+    
+    # Update settings if we have additional data
+    if settings:
+        from data.database import update_user_profile
+        update_user_profile(user["id"], settings=settings)
+    
+    token = create_access_token({"sub": user["username"], "role": user["role"]})
+    ua = request.headers.get("user-agent", "unknown") if request else "unknown"
+    log_activity(
+        act_type="signup",
+        message=f"User '{user['username']}' signed up",
+        html=f'User <strong>{user["username"]}</strong> signed up',
+        user_id=user["id"],
+        username=user["username"],
+        user_agent=ua,
+    )
+    return TokenResponse(
+        access_token=token,
+        username=user["username"],
+        role=user["role"],
+    )
 
 
 @router.get("/users")
