@@ -459,13 +459,36 @@ def mark_case_read_endpoint(
 def create_complaint_endpoint(
     _user: dict = Depends(get_current_user),
     subject: str = Body(..., embed=True),
+    message: str = Body(None, embed=True),
 ):
-    """Create a new case."""
+    """Create a new case with optional first message."""
     c = create_complaint(_user["id"], subject)
+    case_id = c["id"]
+    case_number = c.get("case_number", f"CS{case_id}")
+
+    # Add system message
+    from data.database import _get_conn
+    conn = _get_conn()
+    timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    system_msg = f"Dear {_user['username']}, a case with CaseID #{case_number} has been created at {timestamp}"
+    conn.execute(
+        "INSERT INTO complaint_messages (complaint_id, sender_id, message, message_type) VALUES (?,?,?,?)",
+        (case_id, _user["id"], system_msg, "system"),
+    )
+    conn.commit()
+
+    # Add first user message if provided
+    if message and message.strip():
+        conn.execute(
+            "INSERT INTO complaint_messages (complaint_id, sender_id, message, message_type) VALUES (?,?,?,?)",
+            (case_id, _user["id"], message.strip(), "user"),
+        )
+        conn.commit()
+
     log_activity(
         act_type="case",
-        message=f"New case created: {c.get('case_number', c['id'])} — {subject}",
-        html=f'New case <strong>{c.get("case_number", "")}</strong>: {subject}',
+        message=f"New case created: {case_number} — {subject} [OPEN]",
+        html=f'New case <strong>{case_number}</strong>: {subject} <span style="color:#22c55e;font-weight:600">OPEN</span>',
         user_id=_user["id"],
         username=_user["username"],
     )

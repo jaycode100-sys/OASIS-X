@@ -1513,16 +1513,21 @@ function toggleComplaintPanel() {
   if (fab) fab.classList.toggle('panel-open', !p.classList.contains('hidden'));
   if (!p.classList.contains('hidden')) {
     loadCasesList();
+    // Cases link visible for all users
+    const casesBtn = document.getElementById('cases-link-btn');
+    if (casesBtn) casesBtn.style.display = '';
+    // Show correct form based on role
+    const adminForm = document.getElementById('new-case-admin-form');
+    const userForm = document.getElementById('new-case-user-form');
+    const newBtn = document.getElementById('complaint-new-btn');
     if (S.user?.role === 'superadmin') {
-      loadUserDropdown();
-      const casesBtn = document.getElementById('cases-link-btn');
-      if (casesBtn) casesBtn.style.display = '';
-      const newBtn = document.getElementById('complaint-new-btn');
+      if (adminForm) adminForm.style.display = '';
+      if (userForm) userForm.style.display = 'none';
       if (newBtn) newBtn.style.display = '';
+      loadUserDropdown();
     } else {
-      const casesBtn = document.getElementById('cases-link-btn');
-      if (casesBtn) casesBtn.style.display = 'none';
-      const newBtn = document.getElementById('complaint-new-btn');
+      if (adminForm) adminForm.style.display = 'none';
+      if (userForm) userForm.style.display = '';
       if (newBtn) newBtn.style.display = 'none';
     }
   } else {
@@ -1625,6 +1630,27 @@ async function createCaseForUser() {
     toast('Conversation started!', 'ok');
     await loadCasesList();
     openCase(data.complaint.id);
+  } catch(e) { toast('Failed: ' + e.message, 'err'); }
+}
+
+async function userFileNewCase() {
+  const subjectEl = document.getElementById('user-case-subject');
+  const bodyEl = document.getElementById('user-case-body');
+  const subject = subjectEl.value.trim();
+  const body = bodyEl.value.trim();
+  if (!subject) { toast('Enter a case header', 'err'); return; }
+  try {
+    const data = await authFetch('/api/complaints', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({subject, message: body || undefined})
+    });
+    subjectEl.value = '';
+    bodyEl.value = '';
+    document.getElementById('new-msg-dropdown').classList.add('hidden');
+    toast('Case filed! Redirecting…', 'ok');
+    // Redirect to cases.html with the new case ID
+    window.location.href = '/static/cases.html?case=' + data.complaint.id;
   } catch(e) { toast('Failed: ' + e.message, 'err'); }
 }
 

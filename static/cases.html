@@ -321,6 +321,13 @@
           document.getElementById('new-case-btn').style.display = '';
         }
         await loadCases();
+        // Auto-open case from ?case= query param
+        const params = new URLSearchParams(window.location.search);
+        const caseId = params.get('case');
+        if (caseId) {
+          const cid = parseInt(caseId);
+          if (ALL_CASES.find(c => c.id === cid)) openCase(cid);
+        }
       } catch(e) { console.error(e); }
     }
 

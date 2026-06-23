@@ -16,7 +16,7 @@
       --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
       --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: var(--font); overflow: hidden; }
+    html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: var(--font); }
     body { display: flex; align-items: center; justify-content: center; position: relative; }
 
     /* ── Animated water-like background ── */
@@ -175,8 +175,8 @@
     .login-btn.loading .login-spinner { display: inline-block; }
     .login-btn.loading .login-text { opacity: 0.6; }
     @media (max-width: 480px) {
-      .login-wrap { padding: 16px; }
-      .login-card { padding: 28px 20px 24px; }
+      .login-wrap { padding: 16px; max-height: 100vh; overflow-y: auto; }
+      .login-card { padding: 28px 20px 24px; max-height: none; }
       .login-logo img { width: 36px; height: 36px; }
       .login-logo-text .title { font-size: 17px; }
       .login-logo-text .sub { font-size: 11px; }

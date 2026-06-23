@@ -39,8 +39,10 @@ app.add_middleware(
 )
 
 # ── Static files ──
-STATIC_DIR = __import__("os").path.join(__import__("os").path.dirname(__file__), "..", "static")
-if __import__("os").path.isdir(STATIC_DIR):
+import os as _os
+STATIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "static")
+STATIC_DIR = _os.path.normpath(STATIC_DIR)
+if _os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -66,41 +68,44 @@ app.include_router(router, prefix="/api", tags=["Pipeline"])
 # ── Page routes ──
 @app.get("/login", include_in_schema=False)
 def login_page():
-    login = __import__("os").path.join(STATIC_DIR, "login.html")
-    if __import__("os").path.isfile(login):
-        return FileResponse(login)
+    path = _os.path.join(STATIC_DIR, "login.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
     return JSONResponse(status_code=404, content={"detail": "login.html not found"})
 
 
 @app.get("/", include_in_schema=False)
 def home():
-    landing = __import__("os").path.join(STATIC_DIR, "landing.html")
-    if __import__("os").path.isfile(landing):
-        return FileResponse(landing)
-    index = __import__("os").path.join(STATIC_DIR, "index.html")
-    if __import__("os").path.isfile(index):
-        return FileResponse(index)
-    return {
-        "service": "SWIFT FHS",
-        "status": "running",
-        "docs": "/docs",
-        "note": "Place index.html in static/ to serve the dashboard",
-    }
+    path = _os.path.join(STATIC_DIR, "landing.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    path = _os.path.join(STATIC_DIR, "index.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return {"service": "SWIFT FHS", "status": "running", "docs": "/docs"}
+
+
+@app.get("/landing", include_in_schema=False)
+def landing():
+    path = _os.path.join(STATIC_DIR, "landing.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return JSONResponse(status_code=404, content={"detail": "landing.html not found"})
 
 
 @app.get("/dashboard", include_in_schema=False)
 def dashboard():
-    index = __import__("os").path.join(STATIC_DIR, "index.html")
-    if __import__("os").path.isfile(index):
-        return FileResponse(index)
+    path = _os.path.join(STATIC_DIR, "index.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
     return JSONResponse(status_code=404, content={"detail": "index.html not found"})
 
 
 @app.get("/cases", include_in_schema=False)
 def cases_page():
-    cases = __import__("os").path.join(STATIC_DIR, "cases.html")
-    if __import__("os").path.isfile(cases):
-        return FileResponse(cases)
+    path = _os.path.join(STATIC_DIR, "cases.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
     return JSONResponse(status_code=404, content={"detail": "cases.html not found"})
 
 
@@ -111,6 +116,9 @@ def startup():
         init_db()
         seed_default_users()
         logger.info("Startup complete — DB initialised, users seeded")
+        logger.info("STATIC_DIR = %s (exists=%s)", STATIC_DIR, _os.path.isdir(STATIC_DIR))
+        for f in ["landing.html", "index.html", "login.html", "cases.html"]:
+            logger.info("  %s: %s", f, _os.path.isfile(_os.path.join(STATIC_DIR, f)))
     except Exception as e:
         logger.critical("Startup failed: %s", e)
         sys.exit(1)
