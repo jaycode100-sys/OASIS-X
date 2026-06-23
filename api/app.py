@@ -1,5 +1,6 @@
 import logging
 import sys
+import os as _os
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -38,25 +39,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Static files ──
-import os as _os
+# ── Static dir ──
 _APP_DIR = _os.path.dirname(_os.path.abspath(__file__))
 STATIC_DIR = _os.path.normpath(_os.path.join(_APP_DIR, "..", "static"))
-if _os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-
-# ── Global exception handler ──
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled exception on %s %s", request.method, request.url)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error. Check server logs for details."},
-    )
-
-
-# ── Routes ──
+# ── API routes (registered FIRST) ──
 from api.routes import router  # noqa: E402
 from api.auth import router as auth_router, seed_default_users  # noqa: E402
 from data.database import init_db  # noqa: E402
@@ -64,16 +51,7 @@ from data.database import init_db  # noqa: E402
 app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api", tags=["Pipeline"])
 
-
-# ── Page routes ──
-@app.get("/login", include_in_schema=False)
-def login_page():
-    path = _os.path.join(STATIC_DIR, "login.html")
-    if _os.path.isfile(path):
-        return FileResponse(path)
-    return JSONResponse(status_code=404, content={"detail": "login.html not found"})
-
-
+# ── Page routes (registered BEFORE static mount) ──
 @app.get("/", include_in_schema=False)
 def home():
     path = _os.path.join(STATIC_DIR, "landing.html")
@@ -93,6 +71,14 @@ def landing():
     return JSONResponse(status_code=404, content={"detail": "landing.html not found"})
 
 
+@app.get("/login", include_in_schema=False)
+def login_page():
+    path = _os.path.join(STATIC_DIR, "login.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return JSONResponse(status_code=404, content={"detail": "login.html not found"})
+
+
 @app.get("/dashboard", include_in_schema=False)
 def dashboard():
     path = _os.path.join(STATIC_DIR, "index.html")
@@ -108,6 +94,19 @@ def cases_page():
         return FileResponse(path)
     return JSONResponse(status_code=404, content={"detail": "cases.html not found"})
 
+
+# ── Static files mount (MUST be LAST — mounts are catch-all) ──
+if _os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# ── Global exception handler ──
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s %s", request.method, request.url)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Check server logs for details."},
+    )
 
 # ── Startup ──
 @app.on_event("startup")

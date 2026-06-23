@@ -174,6 +174,15 @@
     .login-spinner { display: none; vertical-align: middle; margin-right: 6px; }
     .login-btn.loading .login-spinner { display: inline-block; }
     .login-btn.loading .login-text { opacity: 0.6; }
+    .back-to-landing {
+      position: fixed; top: 20px; left: 20px; z-index: 100;
+      padding: 8px 16px; border-radius: 8px;
+      background: rgba(11,26,46,0.8); backdrop-filter: blur(8px);
+      border: 1px solid var(--border); color: var(--txt2);
+      font-size: 13px; font-weight: 500; text-decoration: none;
+      transition: all .2s; font-family: var(--font);
+    }
+    .back-to-landing:hover { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
     @media (max-width: 480px) {
       .login-wrap { padding: 16px; max-height: 100vh; overflow-y: auto; }
       .login-card { padding: 28px 20px 24px; max-height: none; }
@@ -199,6 +208,7 @@
     <div class="shape shape-5"></div>
     <div class="shape shape-6"></div>
   </div>
+  <a href="/" class="back-to-landing" title="Back to Home">← Home</a>
   <div class="login-wrap">
     <div class="login-card">
       <a href="/" class="login-logo" style="text-decoration:none">

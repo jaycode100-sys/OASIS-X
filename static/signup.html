@@ -198,6 +198,21 @@
     .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--txt3); }
     .login-footer a { color: var(--accent); text-decoration: none; }
     .login-footer a:hover { text-decoration: underline; }
+    .back-to-landing {
+      position: fixed; top: 20px; left: 20px; z-index: 100;
+      padding: 8px 16px; border-radius: 8px;
+      background: rgba(11,26,46,0.8); backdrop-filter: blur(8px);
+      border: 1px solid var(--border); color: var(--txt2);
+      font-size: 13px; font-weight: 500; text-decoration: none;
+      transition: all .2s; font-family: var(--font);
+    }
+    .back-to-landing:hover { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
+    .step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all .3s; }
+    .step-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+    .form-step { animation: fadeStep .3s ease; }
+    .form-step.hidden { display: none; }
+    @keyframes fadeStep { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 480px) {
       .login-wrap { padding: 16px; max-height: 100vh; overflow-y: auto; }
       .login-card { padding: 28px 20px 24px; max-height: none; }
@@ -226,6 +241,7 @@
     <div class="shape shape-5"></div>
     <div class="shape shape-6"></div>
   </div>
+  <a href="/" class="back-to-landing" title="Back to Home">← Home</a>
   <div class="login-wrap">
     <div class="login-card">
       <a href="/" class="login-logo" style="text-decoration:none">
@@ -236,72 +252,90 @@
         </div>
       </a>
       <div class="login-title">Create Account</div>
+      <div class="step-indicator" id="step-indicator">
+        <span class="step-dot active" id="dot-1"></span>
+        <span class="step-dot" id="dot-2"></span>
+      </div>
       <form id="signup-form" autocomplete="off">
-        <div class="toggle-group">
-          <label>Account Type</label>
-          <div class="toggle-row" id="usage-toggle">
-            <div class="toggle-opt active" data-value="personal">Personal Use</div>
-            <div class="toggle-opt" data-value="organization">Organization</div>
+        <!-- STEP 1: Identity -->
+        <div class="form-step" id="step-1">
+          <div class="toggle-group">
+            <label>Account Type</label>
+            <div class="toggle-row" id="usage-toggle">
+              <div class="toggle-opt active" data-value="personal">Personal Use</div>
+              <div class="toggle-opt" data-value="organization">Organization</div>
+            </div>
           </div>
-        </div>
 
-        <div id="personal-fields">
+          <div id="personal-fields">
+            <div class="form-group">
+              <label for="fullname">Full Name</label>
+              <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required autocomplete="off" />
+            </div>
+          </div>
+
+          <div id="org-fields" class="hidden">
+            <div class="form-group">
+              <label for="orgname">Organization Name</label>
+              <input type="text" id="orgname" name="orgname" placeholder="Enter organization name" autocomplete="off" />
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="fullname">Full Name</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required autocomplete="off" />
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email" />
           </div>
-        </div>
 
-        <div id="org-fields" class="hidden">
+          <div class="form-group optional hidden" id="email2-group">
+            <label for="email2">Second Email</label>
+            <input type="email" id="email2" name="email2" placeholder="Optional second email" autocomplete="email" />
+          </div>
+
           <div class="form-group">
-            <label for="orgname">Organization Name</label>
-            <input type="text" id="orgname" name="orgname" placeholder="Enter organization name" autocomplete="off" />
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Choose a username" required autocomplete="off" />
+          </div>
+
+          <div class="login-error" id="signup-error"></div>
+          <button type="button" class="login-btn" id="next-btn" onclick="goToStep2()">
+            <span class="login-text">Next →</span>
+          </button>
+        </div>
+
+        <!-- STEP 2: Security -->
+        <div class="form-step hidden" id="step-2">
+          <div class="form-group">
+            <label for="company-link">Company Link</label>
+            <select id="company-link" name="company-link">
+              <option value="">No company affiliation</option>
+              <option value="mtu">Mountain Top University</option>
+              <option value="mtn">MTN Nigeria</option>
+              <option value="globacom">Glo (Globacom)</option>
+              <option value="airtel">Airtel Nigeria</option>
+              <option value="9mobile">9mobile</option>
+              <option value="ncc">NCC (Nigerian Communications Commission)</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Create a password (min. 6 chars)" required autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <input type="password" id="confirm-password" name="confirm-password" placeholder="Confirm your password" required autocomplete="new-password" />
+          </div>
+
+          <div class="login-error" id="signup-error-2"></div>
+          <div style="display:flex;gap:10px">
+            <button type="button" class="login-btn" style="background:var(--bg3);color:var(--txt2);flex:0 0 auto;padding:10px 18px" onclick="goToStep1()">← Back</button>
+            <button type="submit" class="login-btn" id="signup-btn" style="flex:1">
+              <span class="login-spinner">⏳</span>
+              <span class="login-text">Create Account</span>
+            </button>
           </div>
         </div>
-
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email" />
-        </div>
-
-        <div class="form-group optional hidden" id="email2-group">
-          <label for="email2">Second Email</label>
-          <input type="email" id="email2" name="email2" placeholder="Optional second email" autocomplete="email" />
-        </div>
-
-        <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" placeholder="Choose a username" required autocomplete="off" />
-        </div>
-
-        <div class="form-group">
-          <label for="company-link">Company Link</label>
-          <select id="company-link" name="company-link">
-            <option value="">No company affiliation</option>
-            <option value="mtu">Mountain Top University</option>
-            <option value="mtn">MTN Nigeria</option>
-            <option value="globacom">Glo (Globacom)</option>
-            <option value="airtel">Airtel Nigeria</option>
-            <option value="9mobile">9mobile</option>
-            <option value="ncc">NCC (Nigerian Communications Commission)</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Create a password (min. 6 chars)" required autocomplete="new-password" />
-        </div>
-        <div class="form-group">
-          <label for="confirm-password">Confirm Password</label>
-          <input type="password" id="confirm-password" name="confirm-password" placeholder="Confirm your password" required autocomplete="new-password" />
-        </div>
-
-        <div class="login-error" id="signup-error"></div>
-        <button type="submit" class="login-btn" id="signup-btn">
-          <span class="login-spinner">⏳</span>
-          <span class="login-text">Create Account</span>
-        </button>
       </form>
       <div class="login-footer">
         Already have an account? <a href="/static/login.html">Sign in</a>
@@ -448,25 +482,15 @@
       });
     });
 
-    /* ── Email validation ── */
-    function isValidEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-
-    /* ── Form submission ── */
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('signup-btn');
+    /* ── Step navigation ── */
+    function goToStep2() {
       const err = document.getElementById('signup-error');
-      const logo = document.querySelector('.login-logo img');
+      err.classList.remove('show');
       const fullname = document.getElementById('fullname').value.trim();
       const orgname = document.getElementById('orgname').value.trim();
       const email = document.getElementById('email').value.trim();
       const email2 = document.getElementById('email2').value.trim();
       const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const confirm = document.getElementById('confirm-password').value;
-      const companyLink = document.getElementById('company-link').value;
 
       if (accountType === 'personal' && !fullname) {
         err.textContent = 'Please enter your full name';
@@ -498,6 +522,39 @@
         err.classList.add('show');
         return;
       }
+      document.getElementById('step-1').classList.add('hidden');
+      document.getElementById('step-2').classList.remove('hidden');
+      document.getElementById('dot-1').classList.remove('active');
+      document.getElementById('dot-2').classList.add('active');
+    }
+
+    function goToStep1() {
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('step-1').classList.remove('hidden');
+      document.getElementById('dot-2').classList.remove('active');
+      document.getElementById('dot-1').classList.add('active');
+    }
+
+    /* ── Email validation ── */
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    /* ── Form submission ── */
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('signup-btn');
+      const err = document.getElementById('signup-error-2');
+      const logo = document.querySelector('.login-logo img');
+      const fullname = document.getElementById('fullname').value.trim();
+      const orgname = document.getElementById('orgname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const email2 = document.getElementById('email2').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm-password').value;
+      const companyLink = document.getElementById('company-link').value;
+
       if (!password || !confirm) {
         err.textContent = 'Please fill in all fields';
         err.classList.add('show');
