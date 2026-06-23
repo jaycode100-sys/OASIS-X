@@ -162,11 +162,32 @@
     .footer a { color: var(--accent); text-decoration: none; }
 
     @media (max-width: 768px) {
-      .header { padding: 0 16px; }
+      .header { padding: 0 16px; height: 60px; }
       .header-nav { display: none; }
-      .hero { padding: 100px 16px 60px; }
-      .hero-subtitle { font-size: 16px; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .header-actions .btn-outline { display: none; }
+      .hero { padding: 90px 16px 60px; }
+      .hero-badge { font-size: 11px; padding: 5px 12px; }
+      .hero-subtitle { font-size: 15px; }
+      .hero-actions { flex-direction: column; width: 100%; }
+      .hero-actions .btn { width: 100%; text-align: center; }
+      .features { padding: 50px 16px; }
+      .features-heading { font-size: 24px; }
+      .features-grid { grid-template-columns: 1fr; gap: 16px; }
+      .feature-card { padding: 24px; }
+      .stats { padding: 50px 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .stat-value { font-size: 28px; }
+      .stat-label { font-size: 11px; }
+      .footer { font-size: 11px; padding: 24px 16px; }
+    }
+    @media (max-width: 480px) {
+      .header-logo-text { font-size: 15px; }
+      .hero-title { font-size: 28px; }
+      .hero-subtitle { font-size: 14px; }
+      .hero-actions .btn { padding: 12px 24px; font-size: 14px; }
+      .feature-icon { font-size: 32px; }
+      .feature-title { font-size: 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
