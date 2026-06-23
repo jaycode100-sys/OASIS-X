@@ -1152,7 +1152,7 @@ function afterAuth() {
   const nexusFab = document.getElementById('nexus-fab');
   const nexusPopup = document.getElementById('nexus-chat-popup');
   const nexusClose = document.getElementById('nexus-popup-close');
-  if (nexusFab) nexusFab.addEventListener('click', () => { nexusPopup.style.display = nexusPopup.style.display === 'none' ? 'block' : 'none'; });
+  if (nexusFab) nexusFab.addEventListener('click', () => { nexusPopup.style.display = 'none'; const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
   if (nexusClose) nexusClose.addEventListener('click', () => { nexusPopup.style.display = 'none'; });
   document.getElementById('chat-close').addEventListener('click', toggleChat);
   document.getElementById('chat-minimize').addEventListener('click', minimizeChat);
@@ -1528,7 +1528,6 @@ function toggleComplaintPanel() {
       if (adminForm) adminForm.style.display = '';
       if (userForm) userForm.style.display = 'none';
       if (newBtn) newBtn.style.display = '';
-      loadUserDropdown();
     } else {
       if (adminForm) adminForm.style.display = 'none';
       if (userForm) userForm.style.display = '';
@@ -1571,6 +1570,8 @@ async function loadCasesList() {
       const isActive = c.id === _activeCaseId;
       const closedTag = c.status === 'closed' ? '<span style="font-size:9px;color:var(--red);background:rgba(239,68,68,.12);padding:2px 8px;border-radius:8px;font-weight:600">Closed</span>' : '<span style="font-size:9px;color:#22c55e;background:rgba(34,197,94,.12);padding:2px 8px;border-radius:8px;font-weight:600">Open</span>';
       const senderName = c.last_sender || c.user_name || 'Unknown';
+      const typeTag = c.complaint_type ? `<span style="font-size:9px;padding:2px 6px;border-radius:6px;font-weight:700;background:rgba(0,255,136,.1);color:var(--accent);margin-right:4px">${c.complaint_type}</span>` : '';
+      const caseNum = c.case_number ? `<span style="font-size:10px;color:var(--txt3);font-family:var(--mono)">${c.case_number}</span>` : '';
       return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})" data-case-id="${c.id}">
         <div class="case-item-left">
           <div class="case-avatar" style="background:${avatarBg}">
@@ -1579,10 +1580,11 @@ async function loadCasesList() {
         </div>
         <div class="case-item-body">
           <div class="case-item-top">
+            ${typeTag}
             <span class="case-item-name">${c.user_name || 'Unknown'}</span>
             <span class="case-item-time">${timeAgo}</span>
           </div>
-          <div class="case-item-subject">${subject}</div>
+          <div class="case-item-subject">${caseNum} ${subject}</div>
           <div class="case-item-preview">${senderName}: ${preview}</div>
           <div class="case-item-bottom">
             ${closedTag}
@@ -1601,33 +1603,22 @@ async function loadCasesList() {
   }
 }
 
-async function loadUserDropdown() {
-  try {
-    const data = await authFetch('/api/auth/users', {}, 8000);
-    const sel = document.getElementById('new-msg-user-select');
-    if (!sel || !data.users) return;
-    sel.innerHTML = '<option value="">Select a user…</option>' +
-      data.users.filter(u => u.id !== S.user?.id).map(u =>
-        `<option value="${u.id}">${u.username} (${u.role})</option>`
-      ).join('');
-  } catch(e) { /* silent */ }
-}
-
 function toggleNewMsgDropdown() {
   const dd = document.getElementById('new-msg-dropdown');
   dd.classList.toggle('hidden');
 }
 
 async function createCaseForUser() {
-  const sel = document.getElementById('new-msg-user-select');
+  const typeEl = document.getElementById('admin-case-type');
   const inp = document.getElementById('new-msg-subject');
   const subject = inp.value.trim();
+  const complaintType = typeEl ? typeEl.value : 'OT';
   if (!subject) { toast('Enter a subject', 'err'); return; }
   try {
     const data = await authFetch('/api/complaints', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({subject})
+      body: JSON.stringify({subject, complaint_type: complaintType})
     });
     inp.value = '';
     document.getElementById('new-msg-dropdown').classList.add('hidden');
@@ -1640,14 +1631,16 @@ async function createCaseForUser() {
 async function userFileNewCase() {
   const subjectEl = document.getElementById('user-case-subject');
   const bodyEl = document.getElementById('user-case-body');
+  const typeEl = document.getElementById('user-case-type');
   const subject = subjectEl.value.trim();
   const body = bodyEl.value.trim();
+  const complaintType = typeEl ? typeEl.value : 'OT';
   if (!subject) { toast('Enter a case header', 'err'); return; }
   try {
     const data = await authFetch('/api/complaints', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({subject, message: body || undefined})
+      body: JSON.stringify({subject, message: body || undefined, complaint_type: complaintType})
     });
     subjectEl.value = '';
     bodyEl.value = '';
@@ -1733,14 +1726,16 @@ async function createComplaint() {
     toggleNewMsgDropdown();
     return;
   }
+  const typeEl = document.getElementById('admin-case-type');
   const inp = document.getElementById('new-msg-subject');
   const subject = inp.value.trim();
+  const complaintType = typeEl ? typeEl.value : 'OT';
   if (!subject) { toast('Enter a subject', 'err'); return; }
   try {
     const data = await authFetch('/api/complaints', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({subject})
+      body: JSON.stringify({subject, complaint_type: complaintType})
     });
     inp.value = '';
     dd.classList.add('hidden');
@@ -1766,7 +1761,7 @@ async function sendComplaintMessage() {
       const data = await authFetch('/api/complaints', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject: 'New conversation'})
+        body: JSON.stringify({subject: 'New conversation', complaint_type: 'OT'})
       });
       _activeCaseId = data.complaint.id;
       await loadCasesList();

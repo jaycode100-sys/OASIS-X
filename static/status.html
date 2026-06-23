@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OASIS-X — System Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #060f1a;
@@ -15,32 +18,43 @@
     --txt: #e0edf8;
     --txt2: #8fa8c4;
     --txt3: #5a7a99;
-    --border: #163050;
-    --green: #00ff88;
-    --yellow: #ffc844;
-    --red: #ff4466;
-    --gray: #2a3a4e;
+    --border: rgba(22,48,80,0.6);
+    --green: #00C89B;
+    --yellow: #D9BC4A;
+    --red: #E0003F;
+    --gray: #C3C3C3;
+    --green-dim: rgba(0,200,155,0.10);
+    --yellow-dim: rgba(217,188,74,0.10);
+    --red-dim: rgba(224,0,63,0.10);
+    --card-bg: rgba(11,26,46,0.7);
+    --card-border: rgba(22,48,80,0.5);
+    --glass-blur: 12px;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
     background: var(--bg);
     color: var(--txt);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
     line-height: 1.6;
     min-height: 100vh;
   }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+  a:hover { color: #33ffaa; }
 
   .header {
-    background: var(--bg2);
+    background: rgba(6,15,26,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
-    padding: 18px 32px;
+    padding: 16px 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
   .header-left {
     display: flex;
@@ -48,71 +62,95 @@
     gap: 14px;
   }
   .header img {
-    height: 40px;
+    height: 36px;
     width: auto;
   }
   .header h1 {
-    font-size: 1.3rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--txt);
   }
   .header h1 span {
     color: var(--accent);
   }
   .header-back {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 500;
     padding: 7px 16px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--txt2);
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .header-back:hover {
     border-color: var(--accent);
     background: var(--accent-dim);
+    color: var(--accent);
     text-decoration: none;
   }
 
-  .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+  .container { max-width: 820px; margin: 0 auto; padding: 32px 20px 60px; }
 
   .banner {
     border-radius: 12px;
-    padding: 24px 28px;
-    margin-bottom: 32px;
+    padding: 22px 28px;
+    margin-bottom: 28px;
     display: flex;
     align-items: center;
     gap: 14px;
-    font-size: 1.1rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
     font-weight: 600;
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   .banner.ok {
-    background: rgba(0,255,136,0.08);
-    border: 1px solid rgba(0,255,136,0.25);
-    color: var(--accent);
+    background: rgba(0,200,155,0.06);
+    border: 1px solid rgba(0,200,155,0.2);
+    color: var(--green);
   }
   .banner.degraded {
-    background: rgba(255,200,68,0.08);
-    border: 1px solid rgba(255,200,68,0.25);
+    background: rgba(217,188,74,0.06);
+    border: 1px solid rgba(217,188,74,0.2);
     color: var(--yellow);
   }
   .banner.outage {
-    background: rgba(255,68,102,0.08);
-    border: 1px solid rgba(255,68,102,0.25);
+    background: rgba(224,0,63,0.06);
+    border: 1px solid rgba(224,0,63,0.2);
     color: var(--red);
   }
   .banner-dot {
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 12px; height: 12px; border-radius: 50%;
     flex-shrink: 0;
   }
-  .banner.ok .banner-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .banner.degraded .banner-dot { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
-  .banner.outage .banner-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .banner.ok .banner-dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .banner.degraded .banner-dot { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+  .banner.outage .banner-dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+
+  .refresh-indicator {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--txt3);
+    margin-bottom: 28px;
+  }
+  .refresh-indicator .time { color: var(--txt2); }
 
   .section-title {
-    font-size: 0.75rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 1.8px;
+    letter-spacing: 2px;
+    font-weight: 600;
     color: var(--txt3);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     margin-top: 36px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
@@ -120,20 +158,26 @@
   .section-title:first-of-type { margin-top: 0; }
 
   .component-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 10px;
     padding: 16px 20px;
-    margin-bottom: 10px;
-    transition: border-color 0.2s;
+    margin-bottom: 8px;
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
-  .component-card:hover { border-color: rgba(0,255,136,0.3); }
+  .component-card:hover {
+    border-color: rgba(0,200,155,0.25);
+    box-shadow: 0 2px 20px rgba(0,200,155,0.04);
+  }
   .component-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
+    margin-bottom: 10px;
   }
   .component-left {
     display: flex;
@@ -142,95 +186,149 @@
     min-width: 0;
   }
   .dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
   }
-  .dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(0,255,136,0.4); }
-  .dot.degraded { background: var(--yellow); box-shadow: 0 0 6px rgba(255,200,68,0.4); }
-  .dot.outage { background: var(--red); box-shadow: 0 0 6px rgba(255,68,102,0.4); }
-  .dot.unknown { background: var(--gray); }
+  .dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(0,200,155,0.5); }
+  .dot.degraded { background: var(--yellow); box-shadow: 0 0 6px rgba(217,188,74,0.5); }
+  .dot.outage { background: var(--red); box-shadow: 0 0 6px rgba(224,0,63,0.5); }
+  .dot.unknown { background: var(--gray); opacity: 0.5; }
   .component-name {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--txt);
   }
   .component-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     flex-shrink: 0;
   }
   .component-status {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     padding: 3px 10px;
     border-radius: 20px;
     font-weight: 600;
     white-space: nowrap;
+    letter-spacing: 0.2px;
   }
-  .component-status.ok { background: rgba(0,255,136,0.1); color: var(--green); }
-  .component-status.degraded { background: rgba(255,200,68,0.1); color: var(--yellow); }
-  .component-status.outage { background: rgba(255,68,102,0.1); color: var(--red); }
-  .component-status.unknown { background: rgba(42,58,78,0.4); color: var(--txt3); }
+  .component-status.ok { background: var(--green-dim); color: var(--green); }
+  .component-status.degraded { background: var(--yellow-dim); color: var(--yellow); }
+  .component-status.outage { background: var(--red-dim); color: var(--red); }
+  .component-status.unknown { background: rgba(195,195,195,0.1); color: var(--gray); }
 
+  .view-historical {
+    font-size: 0.72rem;
+    color: var(--txt3);
+    cursor: pointer;
+    transition: color 0.2s;
+    user-select: none;
+  }
+  .view-historical:hover { color: var(--accent); }
+
+  .uptime-section { margin-top: 4px; }
   .uptime-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(22,48,80,0.5);
+    gap: 14px;
   }
   .uptime-bar {
     display: flex;
     gap: 2px;
     flex: 1;
-    margin-right: 16px;
     overflow: hidden;
-  }
-  .uptime-cell {
-    flex: 1;
-    height: 22px;
-    border-radius: 2px;
-    min-width: 0;
     position: relative;
   }
-  .uptime-cell.green { background: var(--green); opacity: 0.75; }
-  .uptime-cell.yellow { background: var(--yellow); opacity: 0.85; }
-  .uptime-cell.red { background: var(--red); opacity: 0.85; }
-  .uptime-cell.gray { background: var(--gray); opacity: 0.5; }
-  .uptime-cell:hover { opacity: 1; transform: scaleY(1.25); }
-  .uptime-cell[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 110%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #000;
-    color: #fff;
-    font-size: 0.68rem;
-    padding: 3px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    z-index: 10;
-    pointer-events: none;
+  .uptime-cell {
+    width: 3px;
+    min-width: 3px;
+    height: 34px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    position: relative;
   }
+  .uptime-cell.green { background: var(--green); }
+  .uptime-cell.yellow { background: var(--yellow); }
+  .uptime-cell.red { background: var(--red); }
+  .uptime-cell.gray { background: var(--gray); opacity: 0.4; }
+  .uptime-cell:hover { opacity: 0.85; transform: scaleY(1.15); transform-origin: bottom; }
+
+  .uptime-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+  .uptime-labels span {
+    font-size: 0.68rem;
+    color: var(--txt3);
+  }
+
   .uptime-pct {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--txt2);
     white-space: nowrap;
-    min-width: 54px;
+    min-width: 60px;
     text-align: right;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .tooltip {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: #111b2e;
+    border: 1px solid rgba(22,48,80,0.8);
+    border-radius: 8px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    max-width: 280px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-date {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--txt);
+    margin-bottom: 3px;
+  }
+  .tooltip-status {
+    font-size: 0.72rem;
+    color: var(--txt2);
+  }
+  .tooltip-status.green { color: var(--green); }
+  .tooltip-status.yellow { color: var(--yellow); }
+  .tooltip-status.red { color: var(--red); }
+  .tooltip-status.gray { color: var(--gray); }
+  .tooltip-pointer {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: #111b2e;
+    border-right: 1px solid rgba(22,48,80,0.8);
+    border-bottom: 1px solid rgba(22,48,80,0.8);
   }
 
   .incidents-section { margin-top: 48px; }
   .incident-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 10px;
     padding: 20px 24px;
     margin-bottom: 12px;
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   .incident-header {
     display: flex;
@@ -238,37 +336,41 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
   }
   .incident-title {
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    color: var(--txt);
   }
   .incident-date {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--txt3);
   }
   .incident-badge {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     padding: 3px 10px;
     border-radius: 20px;
     font-weight: 600;
   }
-  .incident-badge.resolved { background: rgba(0,255,136,0.1); color: var(--green); }
-  .incident-badge.monitoring { background: rgba(255,200,68,0.1); color: var(--yellow); }
+  .incident-badge.resolved { background: var(--green-dim); color: var(--green); }
+  .incident-badge.monitoring { background: var(--yellow-dim); color: var(--yellow); }
 
-  .timeline { padding-left: 20px; border-left: 2px solid var(--border); }
+  .timeline { padding-left: 22px; border-left: 2px solid var(--border); }
   .timeline-item {
     position: relative;
-    padding: 8px 0 8px 18px;
-    font-size: 0.82rem;
+    padding: 8px 0 12px 18px;
+    font-size: 0.8rem;
     color: var(--txt2);
+    line-height: 1.5;
   }
+  .timeline-item:last-child { padding-bottom: 4px; }
   .timeline-item::before {
     content: '';
     position: absolute;
-    left: -26px;
-    top: 14px;
+    left: -28px;
+    top: 12px;
     width: 10px;
     height: 10px;
     border-radius: 50%;
@@ -279,35 +381,30 @@
   .timeline-item.monitoring::before { background: #44aaff; }
   .timeline-item.resolved::before { background: var(--green); }
   .timeline-time {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--txt3);
     margin-bottom: 2px;
+    font-family: 'Space Grotesk', sans-serif;
   }
 
   .footer {
     text-align: center;
     padding: 28px 20px;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--txt3);
     border-top: 1px solid var(--border);
     margin-top: 40px;
+    font-family: 'Space Grotesk', sans-serif;
   }
 
-  .refresh-indicator {
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--txt3);
-    margin-bottom: 24px;
-  }
-  .refresh-indicator .time { color: var(--txt2); }
-
-  @media (max-width: 600px) {
-    .header { padding: 14px 16px; }
+  @media (max-width: 640px) {
+    .header { padding: 12px 16px; }
     .container { padding: 20px 12px 40px; }
     .component-card { padding: 12px 14px; }
     .uptime-bar { gap: 1px; }
-    .uptime-cell { height: 16px; }
-    .component-right { gap: 10px; }
+    .uptime-cell { width: 2px; min-width: 2px; height: 26px; }
+    .component-right { gap: 8px; }
+    .banner { padding: 16px 18px; font-size: 0.92rem; }
   }
 </style>
 </head>
@@ -316,7 +413,7 @@
 <div class="header">
   <div class="header-left">
     <img src="/static/oasis.png" alt="OASIS-X">
-    <h1>OASIS-X <span>System Status</span></h1>
+    <h1>OASIS-X <span>Status</span></h1>
   </div>
   <a href="/dashboard" class="header-back">← Back to Dashboard</a>
 </div>
@@ -331,23 +428,18 @@
     Last checked: <span class="time" id="last-checked">—</span> · Auto-refresh in 60s
   </div>
 
-  <!-- CORE SERVICES -->
   <div class="section-title">Core Services</div>
   <div id="core-services"></div>
 
-  <!-- AI & CHAT -->
   <div class="section-title">AI &amp; Chat</div>
   <div id="ai-chat"></div>
 
-  <!-- STATIC ASSETS -->
   <div class="section-title">Static Assets</div>
   <div id="static-assets"></div>
 
-  <!-- LOCATIONS -->
   <div class="section-title">Locations (NCC Regions)</div>
   <div id="locations"></div>
 
-  <!-- PAST INCIDENTS -->
   <div class="incidents-section">
     <div class="section-title">Past Incidents</div>
     <div id="incidents"></div>
@@ -356,9 +448,15 @@
 
 <div class="footer">Powered by OASIS-X · Swift Solutions</div>
 
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-date" id="tooltip-date"></div>
+  <div class="tooltip-status" id="tooltip-status"></div>
+  <div class="tooltip-pointer"></div>
+</div>
+
 <script>
 (function() {
-  const COMPONENTS = [
+  var COMPONENTS = [
     { id:'dashboard',      name:'OASIS-X Dashboard',                  group:'core',   api:'/' },
     { id:'landing',        name:'Landing Page',                        group:'core',   api:'/' },
     { id:'auth',           name:'Authentication API (/api/auth/*)',    group:'core',   api:'/api/auth/health' },
@@ -372,10 +470,10 @@
     { id:'lagos',          name:'Lagos Hub',                           group:'loc',    api:'/api/status' },
     { id:'abuja',          name:'Abuja Hub',                           group:'loc',    api:'/api/status' },
     { id:'ph',             name:'Port Harcourt Hub',                   group:'loc',    api:'/api/status' },
-    { id:'kano',           name:'Kano Hub',                            group:'loc',    api:'/api/status' },
+    { id:'kano',           name:'Kano Hub',                            group:'loc',    api:'/api/status' }
   ];
 
-  const INCIDENTS = [
+  var INCIDENTS = [
     {
       title: 'NCC API rate limit exceeded',
       date: '2026-06-18',
@@ -384,7 +482,7 @@
         { time: '14:22 UTC', status: 'investigating', text: 'We are investigating elevated error rates on the NCC API integration. Users may experience delayed license lookups.' },
         { time: '14:41 UTC', status: 'identified',    text: 'Root cause identified: NCC rate limit threshold reached due to increased automated queries. Switching to cached fallback.' },
         { time: '15:05 UTC', status: 'monitoring',    text: 'Rate limit has reset. Failover to secondary endpoint in progress. Monitoring stability.' },
-        { time: '15:30 UTC', status: 'resolved',      text: 'NCC API rate limiting resolved. Implemented request throttling and cache TTL extension to prevent recurrence.' },
+        { time: '15:30 UTC', status: 'resolved',      text: 'NCC API rate limiting resolved. Implemented request throttling and cache TTL extension to prevent recurrence.' }
       ]
     },
     {
@@ -395,7 +493,7 @@
         { time: '09:10 UTC', status: 'investigating', text: 'Weather Service experiencing timeouts when fetching data from Open-Meteo API. Dashboard weather widget may show stale data.' },
         { time: '09:35 UTC', status: 'identified',    text: 'Open-Meteo upstream servers reporting degraded performance. Request queue building up.' },
         { time: '10:15 UTC', status: 'monitoring',    text: 'Open-Meteo performance recovering. Requests completing with increased latency (~3s avg). Using cached weather data as fallback.' },
-        { time: '11:00 UTC', status: 'resolved',      text: 'Weather data fetch fully restored. Added retry logic with exponential backoff and extended cache to 30 minutes.' },
+        { time: '11:00 UTC', status: 'resolved',      text: 'Weather data fetch fully restored. Added retry logic with exponential backoff and extended cache to 30 minutes.' }
       ]
     },
     {
@@ -406,7 +504,7 @@
         { time: '16:45 UTC', status: 'investigating', text: 'Nexus AI Chat returning 503 errors. Ollama backend appears unreachable.' },
         { time: '17:02 UTC', status: 'identified',    text: 'Ollama service process crashed due to OOM on GPU instance. Model weights exceed allocated VRAM after latest update.' },
         { time: '17:28 UTC', status: 'monitoring',    text: 'Ollama restarted with reduced context window. Nexus AI responding to requests. Monitoring memory usage.' },
-        { time: '17:55 UTC', status: 'resolved',      text: 'Nexus AI fully operational. Increased VRAM allocation and implemented model unloading policy for idle sessions.' },
+        { time: '17:55 UTC', status: 'resolved',      text: 'Nexus AI fully operational. Increased VRAM allocation and implemented model unloading policy for idle sessions.' }
       ]
     },
     {
@@ -417,7 +515,7 @@
         { time: '08:00 UTC', status: 'investigating', text: 'Users reporting slow login times (>5s). Authentication API responding but with high latency.' },
         { time: '08:22 UTC', status: 'identified',    text: 'PostgreSQL connection pool exhausted. Active session table growing unbounded due to missing cleanup job.' },
         { time: '08:50 UTC', status: 'monitoring',    text: 'Connection pool restarted. Running cleanup script on stale sessions. Login times returning to normal (<400ms).' },
-        { time: '09:15 UTC', status: 'resolved',      text: 'Authentication delay resolved. Added session expiry cleanup cron job and increased pool size from 20 to 50 connections.' },
+        { time: '09:15 UTC', status: 'resolved',      text: 'Authentication delay resolved. Added session expiry cleanup cron job and increased pool size from 20 to 50 connections.' }
       ]
     },
     {
@@ -428,58 +526,107 @@
         { time: '13:10 UTC', status: 'investigating', text: 'Pipeline API returning intermittent 504 Gateway Timeout. Fibre simulation endpoints affected.' },
         { time: '13:30 UTC', status: 'identified',    text: 'Fibre fault simulation worker stuck in retry loop. Upstream NCC topology service responding slowly.' },
         { time: '13:55 UTC', status: 'monitoring',    text: 'Worker process restarted. Simulation queue draining. NCC topology service recovered.' },
-        { time: '14:20 UTC', status: 'resolved',      text: 'Fibre fault simulation fully operational. Added circuit breaker pattern and dead-letter queue for failed simulation jobs.' },
+        { time: '14:20 UTC', status: 'resolved',      text: 'Fibre fault simulation fully operational. Added circuit breaker pattern and dead-letter queue for failed simulation jobs.' }
       ]
-    },
+    }
   ];
 
-  const STATUS_LABELS = { ok:'Operational', degraded:'Degraded Performance', outage:'Major Outage', unknown:'Unknown' };
+  var STATUS_LABELS = { ok:'Operational', degraded:'Degraded Performance', outage:'Major Outage', unknown:'Unknown' };
 
   function seededRandom(seed) {
-    let s = seed;
+    var s = seed;
     return function() {
       s = (s * 16807 + 0) % 2147483647;
       return (s - 1) / 2147483646;
     };
   }
 
-  function generateUptimeBars() {
-    const data = {};
+  function generateUptimeData() {
+    var data = {};
     COMPONENTS.forEach(function(c) {
-      const rng = seededRandom(c.id.split('').reduce(function(a,ch){ return a + ch.charCodeAt(0); }, 0) + 42);
-      const cells = [];
-      for (let i = 0; i < 90; i++) {
-        const r = rng();
+      var seed = 0;
+      for (var k = 0; k < c.id.length; k++) seed += c.id.charCodeAt(k);
+      seed = seed + 42;
+      var rng = seededRandom(seed);
+      var cells = [];
+      for (var i = 0; i < 90; i++) {
+        var r = rng();
         if (r < 0.93) cells.push('green');
         else if (r < 0.97) cells.push('yellow');
         else if (r < 0.99) cells.push('green');
         else if (r < 0.996) cells.push('red');
         else cells.push('gray');
       }
-      // ensure at least one red block somewhere interesting
-      const redIdx = Math.floor(rng() * 70) + 5;
+      var redIdx = Math.floor(rng() * 70) + 5;
       cells[redIdx] = 'red';
-      cells[redIdx+1] = cells[redIdx+1] === 'green' ? 'yellow' : cells[redIdx+1];
+      if (redIdx + 1 < 90 && cells[redIdx + 1] === 'green') cells[redIdx + 1] = 'yellow';
 
-      const greens = cells.filter(function(c){ return c === 'green'; }).length;
-      const yelrows = cells.filter(function(c){ return c === 'yellow'; }).length;
-      const uptime = ((greens * 1.0 + yelrows * 0.5) / cells.length * 100).toFixed(1);
+      var greens = 0, yellows = 0;
+      for (var j = 0; j < cells.length; j++) {
+        if (cells[j] === 'green') greens++;
+        else if (cells[j] === 'yellow') yellows++;
+      }
+      var uptime = ((greens * 1.0 + yellows * 0.5) / cells.length * 100).toFixed(1);
       data[c.id] = { cells: cells, uptime: uptime };
     });
     return data;
   }
 
-  const UPTIME_DATA = generateUptimeBars();
+  var UPTIME_DATA = generateUptimeData();
+
+  function getTooltipDate(daysAgo) {
+    var d = new Date();
+    d.setDate(d.getDate() - (89 - daysAgo));
+    var day = d.getDate();
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return day + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function getTooltipStatusText(color) {
+    if (color === 'green') return 'No downtime recorded on this day.';
+    if (color === 'yellow') return 'Degraded performance recorded.';
+    if (color === 'red') return 'Major outage recorded.';
+    return 'No data available.';
+  }
+
+  var tooltipEl = document.getElementById('tooltip');
+  var tooltipDate = document.getElementById('tooltip-date');
+  var tooltipStatus = document.getElementById('tooltip-status');
+
+  function showTooltip(e, date, color) {
+    tooltipDate.textContent = date;
+    tooltipStatus.textContent = getTooltipStatusText(color);
+    tooltipStatus.className = 'tooltip-status ' + color;
+
+    var rect = e.target.getBoundingClientRect();
+    var tipW = 220;
+    var tipH = 56;
+
+    var left = rect.left + rect.width / 2 - tipW / 2;
+    var top = rect.top - tipH - 10;
+
+    if (left < 8) left = 8;
+    if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+    if (top < 8) top = rect.bottom + 10;
+
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+    tooltipEl.classList.add('visible');
+  }
+
+  function hideTooltip() {
+    tooltipEl.classList.remove('visible');
+  }
 
   function renderComponent(c, statusObj) {
     var st = statusObj[c.id] || 'ok';
     var ud = UPTIME_DATA[c.id];
-    var cellHtml = ud.cells.map(function(color, i) {
-      var date = new Date();
-      date.setDate(date.getDate() - (89 - i));
-      var label = date.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ': ' + (color === 'green' ? 'Operational' : color === 'yellow' ? 'Degraded' : color === 'red' ? 'Outage' : 'No Data');
-      return '<div class="uptime-cell ' + color + '" data-tooltip="' + label + '"></div>';
-    }).join('');
+
+    var cellHtml = '';
+    for (var i = 0; i < ud.cells.length; i++) {
+      var color = ud.cells[i];
+      cellHtml += '<div class="uptime-cell ' + color + '" data-index="' + i + '" data-color="' + color + '"></div>';
+    }
 
     return '<div class="component-card">' +
       '<div class="component-row">' +
@@ -489,11 +636,18 @@
         '</div>' +
         '<div class="component-right">' +
           '<span class="component-status ' + st + '">' + STATUS_LABELS[st] + '</span>' +
+          '<span class="view-historical">View historical uptime</span>' +
         '</div>' +
       '</div>' +
-      '<div class="uptime-row">' +
+      '<div class="uptime-section">' +
         '<div class="uptime-bar">' + cellHtml + '</div>' +
-        '<div class="uptime-pct">' + ud.uptime + '%</div>' +
+        '<div class="uptime-labels">' +
+          '<span>90 days ago</span>' +
+          '<span>Today</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:flex-end;margin-top:4px;">' +
+          '<span class="uptime-pct">' + ud.uptime + '% uptime</span>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -514,7 +668,7 @@
         html += '</div>';
       });
       html += '</div>';
-      html += '<div style="margin-top:10px;text-align:right;"><span class="incident-badge ' + inc.badge + '">' + (inc.badge === 'resolved' ? '✓ Resolved' : 'Monitoring') + '</span></div>';
+      html += '<div style="margin-top:10px;text-align:right;"><span class="incident-badge ' + inc.badge + '">' + (inc.badge === 'resolved' ? '\u2713 Resolved' : 'Monitoring') + '</span></div>';
       html += '</div>';
     });
     return html;
@@ -530,7 +684,6 @@
     document.getElementById('locations').innerHTML     = groups.loc.map(function(c){ return renderComponent(c, statusMap); }).join('');
     document.getElementById('incidents').innerHTML     = renderIncidents();
 
-    // banner
     var vals = Object.values(statusMap);
     var banner = document.getElementById('banner');
     if (vals.indexOf('outage') !== -1) {
@@ -545,9 +698,30 @@
     }
 
     document.getElementById('last-checked').textContent = new Date().toLocaleTimeString();
+    bindTooltips();
   }
 
-  // default: all ok
+  function bindTooltips() {
+    var cells = document.querySelectorAll('.uptime-cell');
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].removeEventListener('mouseover', handleMouseOver);
+      cells[i].removeEventListener('mouseout', handleMouseOut);
+      cells[i].addEventListener('mouseover', handleMouseOver);
+      cells[i].addEventListener('mouseout', handleMouseOut);
+    }
+  }
+
+  function handleMouseOver(e) {
+    var idx = parseInt(e.target.getAttribute('data-index'));
+    var color = e.target.getAttribute('data-color');
+    var date = getTooltipDate(idx);
+    showTooltip(e, date, color);
+  }
+
+  function handleMouseOut() {
+    hideTooltip();
+  }
+
   function getDefaultStatus() {
     var s = {};
     COMPONENTS.forEach(function(c){ s[c.id] = 'ok'; });
@@ -569,11 +743,9 @@
       .catch(function() { return getDefaultStatus(); });
   }
 
-  // initial render
   renderAll(getDefaultStatus());
   fetchStatus().then(renderAll);
 
-  // auto refresh every 60s
   setInterval(function() {
     fetchStatus().then(renderAll);
   }, 60000);

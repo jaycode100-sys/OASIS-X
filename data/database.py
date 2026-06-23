@@ -134,6 +134,10 @@ def init_db():
         conn.execute("ALTER TABLE complaint_messages ADD COLUMN message_type TEXT DEFAULT 'message'")
     except sqlite3.OperationalError:
         pass
+    try:
+        conn.execute("ALTER TABLE complaints ADD COLUMN complaint_type TEXT DEFAULT 'OT'")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
 
 def save_pipeline_run(city, season, n_samples, rows, summary, ncc_compliance):
@@ -319,17 +323,53 @@ def update_user_profile(user_id: int, **kwargs) -> dict | None:
 
 # ── Cases (formerly Complaints) ──────────────────────────────────────────────────
 
-import uuid
+COMPLAINT_TYPE_ABBR = {
+    "Dashboard Issues": "DI",
+    "Chat Issues": "CI",
+    "Networking Issues": "NI",
+    "Deployment Issues": "DP",
+    "Other": "OT",
+}
 
-def _gen_case_number():
-    return f"CASE-{uuid.uuid4().hex[:8].upper()}"
+COMPLAINT_TYPE_ABBR_REVERSE = {v: k for k, v in COMPLAINT_TYPE_ABBR.items()}
+ALL_VALID_ABBRS = set(COMPLAINT_TYPE_ABBR.values())
 
-def create_complaint(user_id: int, subject: str) -> dict:
+def _gen_case_number(complaint_type: str) -> str:
+    from datetime import datetime
+    now = datetime.now()
+    date_str = now.strftime("%y%m%d")
+    # Normalize: accept full name or abbreviation, always use abbreviation for DB lookup
+    if complaint_type in COMPLAINT_TYPE_ABBR:
+        abbr = COMPLAINT_TYPE_ABBR[complaint_type]
+        normalized_type = abbr
+    elif complaint_type in ALL_VALID_ABBRS:
+        abbr = complaint_type
+        normalized_type = complaint_type
+    else:
+        abbr = "OT"
+        normalized_type = "OT"
     conn = _get_conn()
-    case_number = _gen_case_number()
+    r = conn.execute(
+        "SELECT COUNT(*) as cnt FROM complaints "
+        "WHERE complaint_type=? AND DATE(created_at)=DATE(?)",
+        (normalized_type, now.strftime("%Y-%m-%d"))
+    ).fetchone()
+    seq = (dict(r)["cnt"] or 0) + 1
+    return f"{abbr}{date_str}:{seq:04d}"
+
+def create_complaint(user_id: int, subject: str, complaint_type: str = "OT") -> dict:
+    conn = _get_conn()
+    # Normalize complaint_type to abbreviation for storage
+    if complaint_type in COMPLAINT_TYPE_ABBR:
+        normalized_type = COMPLAINT_TYPE_ABBR[complaint_type]
+    elif complaint_type in ALL_VALID_ABBRS:
+        normalized_type = complaint_type
+    else:
+        normalized_type = "OT"
+    case_number = _gen_case_number(complaint_type)
     cur = conn.execute(
-        "INSERT INTO complaints (case_number, user_id, subject) VALUES (?,?,?)",
-        (case_number, user_id, subject)
+        "INSERT INTO complaints (case_number, user_id, subject, complaint_type) VALUES (?,?,?,?)",
+        (case_number, user_id, subject, normalized_type)
     )
     conn.commit()
     return dict(conn.execute("SELECT * FROM complaints WHERE id=?", (cur.lastrowid,)).fetchone())

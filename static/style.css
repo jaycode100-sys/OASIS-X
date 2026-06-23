@@ -82,11 +82,20 @@
 .nexus-fab:active { transform: scale(.95); }
 
 .nexus-chat-popup {
-  position: absolute; bottom: 68px; right: 0;
-  width: 320px; border-radius: 16px; overflow: hidden;
+  position: absolute; bottom: 68px; right: 50%;
+  transform: translateX(50%);
+  width: 320px; border-radius: 16px; overflow: visible;
   background: #fff; color: #1a1a1a;
   box-shadow: 0 12px 48px rgba(0,0,0,.3);
   animation: nexusPopupIn .3s cubic-bezier(.4,0,.2,1);
+}
+.nexus-chat-popup::after {
+  content: ''; position: absolute; bottom: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #fff;
 }
 @keyframes nexusPopupIn { from { opacity: 0; transform: translateY(12px) scale(.95); } to { opacity: 1; transform: none; } }
 

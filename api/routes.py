@@ -25,6 +25,7 @@ from data.database import (
     create_complaint, get_complaint, get_complaints, get_complaint_messages,
     add_complaint_message, get_all_open_complaints, update_complaint_status,
     get_cases_for_user, get_total_unread_for_user, mark_case_read,
+    COMPLAINT_TYPE_ABBR,
 )
 
 router = APIRouter()
@@ -460,9 +461,10 @@ def create_complaint_endpoint(
     _user: dict = Depends(get_current_user),
     subject: str = Body(..., embed=True),
     message: str = Body(None, embed=True),
+    complaint_type: str = Body("OT", embed=True),
 ):
     """Create a new case with optional first message."""
-    c = create_complaint(_user["id"], subject)
+    c = create_complaint(_user["id"], subject, complaint_type)
     case_id = c["id"]
     case_number = c.get("case_number", f"CS{case_id}")
 

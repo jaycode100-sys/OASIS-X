@@ -239,6 +239,11 @@
         <button class="filter-btn active" data-filter="all">All</button>
         <button class="filter-btn" data-filter="open">Open</button>
         <button class="filter-btn" data-filter="closed">Closed</button>
+        <button class="filter-btn" data-filter="type:DI" title="Dashboard Issues">DI</button>
+        <button class="filter-btn" data-filter="type:CI" title="Chat Issues">CI</button>
+        <button class="filter-btn" data-filter="type:NI" title="Networking Issues">NI</button>
+        <button class="filter-btn" data-filter="type:DP" title="Deployment Issues">DP</button>
+        <button class="filter-btn" data-filter="type:OT" title="Other">OT</button>
         <button class="new-case-btn" id="new-case-btn" style="display:none" onclick="showNewCaseModal()">+ New</button>
       </div>
       <div class="cases-list" id="cases-list">
@@ -263,8 +268,14 @@
   <div class="modal-overlay" id="new-case-modal">
     <div class="modal-card">
       <h3>Start Conversation</h3>
-      <label for="new-case-user">Send to</label>
-      <select id="new-case-user"><option value="">Select a user…</option></select>
+      <label for="new-case-type">Complaint Type</label>
+      <select id="new-case-type">
+        <option value="DI">Dashboard Issues</option>
+        <option value="CI">Chat Issues</option>
+        <option value="NI">Networking Issues</option>
+        <option value="DP">Deployment Issues</option>
+        <option value="OT" selected>Other</option>
+      </select>
       <label for="new-case-subject">Subject</label>
       <input type="text" id="new-case-subject" placeholder="Enter subject…" />
       <div class="modal-actions">
@@ -361,7 +372,14 @@
     function renderCasesList() {
       const list = document.getElementById('cases-list');
       let filtered = ALL_CASES;
-      if (CURRENT_FILTER !== 'all') filtered = ALL_CASES.filter(c => c.status === CURRENT_FILTER);
+      if (CURRENT_FILTER !== 'all') {
+        if (CURRENT_FILTER.startsWith('type:')) {
+          const typeFilter = CURRENT_FILTER.split(':')[1];
+          filtered = ALL_CASES.filter(c => c.complaint_type === typeFilter);
+        } else {
+          filtered = ALL_CASES.filter(c => c.status === CURRENT_FILTER);
+        }
+      }
 
       if (!filtered.length) {
         list.innerHTML = `<div class="cases-empty">
@@ -381,16 +399,19 @@
         const unread = c.unread_count || 0;
         const isActive = ACTIVE_CASE && ACTIVE_CASE.id === c.id;
         const senderName = c.last_sender || c.user_name || 'Unknown';
+        const typeTag = c.complaint_type ? `<span style="font-size:9px;padding:2px 6px;border-radius:6px;font-weight:700;background:rgba(0,255,136,.1);color:var(--accent);margin-right:4px">${c.complaint_type}</span>` : '';
+        const caseNum = c.case_number ? `<span style="font-size:10px;color:var(--txt3);font-family:var(--mono)">${c.case_number}</span> ` : '';
         return `<div class="case-item ${isActive ? 'active' : ''}" onclick="openCase(${c.id})">
           <div class="case-avatar" style="background:${avatarBg}">
             ${c.avatar_data ? '<img src="' + c.avatar_data + '" alt="" />' : '<span>' + initials + '</span>'}
           </div>
           <div class="case-info">
             <div class="case-name-row">
+              ${typeTag}
               <span class="case-name">${c.user_name || 'Unknown'}</span>
               <span class="case-status-tag ${c.status}">${c.status}</span>
             </div>
-            <div class="case-subject">${subject}</div>
+            <div class="case-subject">${caseNum}${subject}</div>
             <div class="case-preview">${senderName}: ${preview}</div>
           </div>
           <div class="case-meta">
@@ -424,7 +445,7 @@
             </div>
             <div class="case-header-info">
               <h3>${c.user_name || 'Unknown'}</h3>
-              <span>${c.case_number || 'Case #' + c.id} · ${c.subject || ''}</span>
+              <span>${c.complaint_type ? '<span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;background:rgba(0,255,136,.1);color:var(--accent);margin-right:4px">' + c.complaint_type + '</span>' : ''}${c.case_number || 'Case #' + c.id} · ${c.subject || ''}</span>
             </div>
           </div>
           <div class="case-actions">
@@ -500,30 +521,22 @@
     }
 
     // ── New case modal (superadmin only) ──
-    async function showNewCaseModal() {
+    function showNewCaseModal() {
       document.getElementById('new-case-modal').classList.add('show');
       document.getElementById('new-case-subject').value = '';
-      const sel = document.getElementById('new-case-user');
-      sel.innerHTML = '<option value="">Select a user…</option>';
-      try {
-        const data = await authFetch('/api/auth/users');
-        if (data.users) {
-          sel.innerHTML += data.users.filter(u => u.id !== ME.id).map(u =>
-            '<option value="' + u.id + '">' + u.username + ' (' + u.role + ')</option>'
-          ).join('');
-        }
-      } catch(e) { console.error(e); }
     }
     function closeNewCaseModal() {
       document.getElementById('new-case-modal').classList.remove('show');
     }
     async function createNewCase() {
+      const typeEl = document.getElementById('new-case-type');
       const subject = document.getElementById('new-case-subject').value.trim();
+      const complaintType = typeEl ? typeEl.value : 'OT';
       if (!subject) { toast('Enter a subject', 'err'); return; }
       try {
         const data = await authFetch('/api/complaints', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({subject})
+          body: JSON.stringify({subject, complaint_type: complaintType})
         });
         closeNewCaseModal();
         toast('Conversation started!', 'ok');
