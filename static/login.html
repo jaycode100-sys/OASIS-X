@@ -6,417 +6,646 @@
   <title>OASIS-X — Login</title>
   <meta name="description" content="Login to OASIS-X Autonomous Fibre Fault Healing System" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/static/oasis.png" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --bg: #060f1a; --bg2: #0b1a2e; --bg3: #10233d;
-      --border: #1a3450; --txt: #e0edf8; --txt2: #7090b0; --txt3: #3d5a7a;
-      --accent: #00ff88; --accent-dim: rgba(0,255,136,0.15);
-      --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-    html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: var(--font); }
-    body { display: flex; align-items: center; justify-content: center; position: relative; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* ── Animated water-like background ── */
-    .bg-shapes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-    .bg-shapes .shape {
-      position: absolute; border-radius: 50%; opacity: 0.25;
-      background: var(--bg2); border: 1px solid var(--border); will-change: transform;
-      pointer-events: auto; cursor: pointer;
+    :root {
+      --bg: #030a12;
+      --bg-card: rgba(8, 20, 32, 0.8);
+      --accent: #00ff88;
+      --blue: #3b82f6;
+      --cyan: #22d3ee;
+      --purple: #a855f7;
+      --txt: #e8f0f8;
+      --txt2: #6b8aa8;
+      --txt3: #3d5a7a;
+      --border: rgba(255, 255, 255, 0.08);
+      --red: #ef4444;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
-    .shape-1 {
-      width: 500px; height: 500px; top: -10%; left: -8%;
-      animation: drift1 22s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 30% 30%, var(--bg3), transparent);
-      border-radius: 42% 58% 65% 35% / 48% 52% 48% 52%;
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--txt);
+      font-family: var(--font-body);
+      overflow-y: auto;
+      line-height: 1.6;
     }
-    .shape-2 {
-      width: 380px; height: 380px; bottom: -12%; right: -6%;
-      animation: drift2 26s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 70% 70%, var(--bg3), transparent);
-      border-radius: 55% 45% 38% 62% / 52% 58% 42% 48%;
+
+    /* ── Canvas background ── */
+    #fibreCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
     }
-    .shape-3 {
-      width: 280px; height: 280px; top: 55%; left: -5%;
-      animation: drift3 20s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 50% 50%, var(--border), transparent);
-      border-radius: 62% 38% 48% 52% / 38% 55% 45% 62%;
+
+    /* ── Animated grid ── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridDrift 20s linear infinite;
+    }
+
+    @keyframes gridDrift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(60px, 60px); }
+    }
+
+    /* ── Glowing orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(100px);
       opacity: 0.12;
     }
-    .shape-4 {
-      width: 200px; height: 200px; top: 12%; right: 8%;
-      animation: drift4 18s ease-in-out infinite alternate;
-      background: radial-gradient(circle at 40% 60%, rgba(0,255,136,0.06), transparent);
-      border: 1px solid rgba(0,255,136,0.08);
-      border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-      opacity: 0.4;
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: var(--accent);
+      top: -200px; left: -100px;
+      animation: orbFloat1 18s ease-in-out infinite alternate;
     }
-    .shape-5 {
-      width: 150px; height: 150px; bottom: 30%; right: 25%;
-      animation: drift5 24s ease-in-out infinite alternate;
-      background: var(--bg2);
-      border-radius: 67% 33% 47% 53% / 57% 44% 56% 43%;
-      opacity: 0.18;
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: var(--blue);
+      bottom: -150px; right: -100px;
+      animation: orbFloat2 22s ease-in-out infinite alternate;
     }
-    .shape-6 {
-      width: 60px; height: 60px; top: 30%; left: 50%;
-      animation: drift6 15s ease-in-out infinite alternate;
-      background: rgba(0,255,136,0.04);
-      border: 1px solid rgba(0,255,136,0.06);
-      border-radius: 50%;
-      opacity: 0.3;
+    .orb-3 {
+      width: 400px; height: 400px;
+      background: var(--purple);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: orbFloat3 15s ease-in-out infinite alternate;
     }
 
-    @keyframes drift1 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 42% 58% 65% 35% / 48% 52% 48% 52%; }
-      25%  { transform: translate(30px, 20px) rotate(6deg) scale(1.02); border-radius: 48% 52% 58% 42% / 52% 48% 52% 48%; }
-      50%  { transform: translate(60px, 40px) rotate(12deg) scale(1.05); border-radius: 52% 48% 48% 52% / 58% 42% 58% 42%; }
-      75%  { transform: translate(30px, 20px) rotate(6deg) scale(1.02); border-radius: 48% 52% 52% 48% / 48% 52% 48% 52%; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 42% 58% 65% 35% / 48% 52% 48% 52%; }
+    @keyframes orbFloat1 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(80px, 60px) scale(1.1); }
     }
-    @keyframes drift2 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 55% 45% 38% 62% / 52% 58% 42% 48%; }
-      25%  { transform: translate(-25px, -15px) rotate(-4deg) scale(1.03); border-radius: 52% 48% 42% 58% / 48% 52% 48% 52%; }
-      50%  { transform: translate(-50px, -30px) rotate(-8deg) scale(1.08); border-radius: 48% 52% 48% 52% / 52% 48% 52% 48%; }
-      75%  { transform: translate(-25px, -15px) rotate(-4deg) scale(1.03); border-radius: 52% 48% 45% 55% / 48% 52% 48% 52%; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 55% 45% 38% 62% / 52% 58% 42% 48%; }
+    @keyframes orbFloat2 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(-60px, -80px) scale(1.15); }
     }
-    @keyframes drift3 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 62% 38% 48% 52% / 38% 55% 45% 62%; }
-      25%  { transform: translate(20px, -10px) rotate(7deg) scale(1.04); border-radius: 58% 42% 52% 48% / 42% 58% 42% 58%; }
-      50%  { transform: translate(40px, -20px) rotate(15deg) scale(1.1); border-radius: 52% 48% 58% 42% / 48% 52% 48% 52%; }
-      75%  { transform: translate(20px, -10px) rotate(7deg) scale(1.04); border-radius: 58% 42% 52% 48% / 42% 58% 42% 58%; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 62% 38% 48% 52% / 38% 55% 45% 62%; }
-    }
-    @keyframes drift4 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
-      25%  { transform: translate(-10px, 15px) rotate(-5deg) scale(1.03); border-radius: 35% 65% 65% 35% / 35% 35% 65% 65%; }
-      50%  { transform: translate(-20px, 30px) rotate(-10deg) scale(1.06); border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; }
-      75%  { transform: translate(-10px, 15px) rotate(-5deg) scale(1.03); border-radius: 35% 65% 65% 35% / 35% 35% 65% 65%; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
-    }
-    @keyframes drift5 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 67% 33% 47% 53% / 57% 44% 56% 43%; }
-      25%  { transform: translate(7px, -12px) rotate(10deg) scale(1.05); border-radius: 62% 38% 52% 48% / 52% 48% 52% 48%; }
-      50%  { transform: translate(15px, -25px) rotate(20deg) scale(1.12); border-radius: 57% 43% 57% 43% / 47% 53% 47% 53%; }
-      75%  { transform: translate(7px, -12px) rotate(10deg) scale(1.05); border-radius: 62% 38% 52% 48% / 52% 48% 52% 48%; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 67% 33% 47% 53% / 57% 44% 56% 43%; }
-    }
-    @keyframes drift6 {
-      0%   { transform: translate(0, 0) scale(1); opacity: 0.3; border-radius: 50%; }
-      25%  { transform: translate(15px, -20px) scale(1.2); opacity: 0.25; border-radius: 45% 55% 55% 45% / 55% 45% 55% 45%; }
-      50%  { transform: translate(30px, -40px) scale(1.5); opacity: 0.1; border-radius: 40% 60% 60% 40% / 60% 40% 60% 40%; }
-      75%  { transform: translate(15px, -20px) scale(1.2); opacity: 0.25; border-radius: 45% 55% 55% 45% / 55% 45% 55% 45%; }
-      100% { transform: translate(0, 0) scale(1); opacity: 0.3; border-radius: 50%; }
+    @keyframes orbFloat3 {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-40%, -60%) scale(1.2); }
     }
 
-    /* ── Disintegration particles ── */
-    .particle {
-      position: fixed; border-radius: 50%; pointer-events: none;
-      z-index: 0; will-change: transform, opacity;
-      animation: particleBurst 0.9s ease-out forwards;
+    /* ── Back button ── */
+    .back-home {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(8, 20, 32, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      color: var(--txt2);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      font-family: var(--font-body);
+      transition: all 0.2s ease;
     }
-    @keyframes particleBurst {
-      0%   { transform: translate(0, 0) scale(1); opacity: 0.6; }
-      100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
+    .back-home:hover {
+      color: var(--accent);
+      border-color: rgba(0, 255, 136, 0.3);
+      background: rgba(0, 255, 136, 0.06);
     }
 
-    .login-wrap { position: relative; z-index: 1; width: 100%; max-width: 400px; padding: 24px; }
+    /* ── Login wrapper ── */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    /* ── Login card ── */
     .login-card {
-      background: rgba(11,26,46,0.85); backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 40px 32px 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      position: relative; overflow: hidden;
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px 36px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+      transition: box-shadow 0.3s ease;
     }
-    .login-card::before {
-      content: ''; position: absolute; inset: -2px;
-      background: conic-gradient(from 0deg, #00ff88, #3b82f6, #f59e0b, #00ff88);
-      border-radius: 18px; z-index: -1; opacity: 0.5;
-      animation: borderGlow 4s linear infinite;
+    .login-card:hover {
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.08);
     }
-    @keyframes borderGlow {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+
+    /* ── Logo ── */
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+      text-decoration: none;
     }
-    .login-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
-    .login-logo img { width: 42px; height: 42px; position: relative; }
-    .login-logo img.loading {
-      animation: logoBrighten 1.5s ease-in-out infinite;
+    .login-logo img {
+      width: 44px;
+      height: 44px;
     }
-    @keyframes logoBrighten {
-      0%   { filter: brightness(0.4) saturate(0.5); }
-      50%  { filter: brightness(1.2) saturate(1.2); }
-      100% { filter: brightness(0.4) saturate(0.5); }
+    .login-logo-text {
+      display: flex;
+      flex-direction: column;
     }
-    .login-logo-text .title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
-    .login-logo-text .sub { font-size: 12px; color: var(--txt2); }
-    .login-title { font-size: 14px; font-weight: 600; color: var(--txt2); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--txt2); margin-bottom: 6px; }
+    .login-logo-text .title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--txt);
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .login-logo-text .sub {
+      font-size: 12px;
+      color: var(--txt2);
+      line-height: 1.3;
+    }
+
+    /* ── Terminal prefix ── */
+    .terminal-prefix {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 24px 0 6px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent);
+      opacity: 0.8;
+    }
+    .terminal-prefix .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: var(--accent);
+      animation: blink 1s step-end infinite;
+      opacity: 0.7;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ── Heading ── */
+    .login-heading {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--txt);
+      margin-bottom: 28px;
+      letter-spacing: -0.3px;
+    }
+
+    /* ── Form groups ── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--txt2);
+      margin-bottom: 6px;
+    }
+    .input-wrap {
+      position: relative;
+    }
     .form-group input {
-      width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
-      background: rgba(16,35,61,0.7); color: var(--txt); font-size: 14px; font-family: var(--font);
-      outline: none; transition: border-color 0.2s;
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(3, 10, 18, 0.6);
+      color: var(--txt);
+      font-size: 14px;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .form-group input:focus { border-color: var(--accent); }
+    .form-group input::placeholder {
+      color: var(--txt3);
+    }
+    .form-group input:focus {
+      border-color: rgba(0, 255, 136, 0.4);
+      box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.06);
+    }
+
+    /* ── Password toggle ── */
+    .toggle-pw {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--txt3);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+    .toggle-pw:hover {
+      color: var(--txt2);
+    }
+    .toggle-pw svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ── Remember / Forgot row ── */
+    .form-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    .form-options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--txt2);
+      cursor: pointer;
+      user-select: none;
+    }
+    .form-options input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .form-options a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      transition: opacity 0.2s;
+    }
+    .form-options a:hover {
+      opacity: 0.8;
+    }
+
+    /* ── Submit button ── */
     .login-btn {
-      width: 100%; padding: 12px; border-radius: 8px; border: none;
-      background: var(--accent); color: #060f1a; font-size: 15px; font-weight: 700;
-      cursor: pointer; font-family: var(--font); transition: opacity 0.2s; margin-top: 8px;
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #030a12;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+      letter-spacing: 0.2px;
     }
-    .login-btn:hover { opacity: 0.85; }
-    .login-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .login-error { color: var(--red); font-size: 13px; margin-bottom: 8px; text-align: center; display: none; }
-    .login-error.show { display: block; }
-    .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--txt3); }
-    .login-spinner { display: none; vertical-align: middle; margin-right: 6px; }
-    .login-btn.loading .login-spinner { display: inline-block; }
-    .login-btn.loading .login-text { opacity: 0.6; }
-    .back-to-landing {
-      position: fixed; top: 20px; left: 20px; z-index: 100;
-      padding: 8px 16px; border-radius: 8px;
-      background: rgba(11,26,46,0.8); backdrop-filter: blur(8px);
-      border: 1px solid var(--border); color: var(--txt2);
-      font-size: 13px; font-weight: 500; text-decoration: none;
-      transition: all .2s; font-family: var(--font);
+    .login-btn:hover {
+      opacity: 0.9;
     }
-    .back-to-landing:hover { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
+    .login-btn:active {
+      transform: scale(0.985);
+    }
+    .login-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Error message ── */
+    .login-error {
+      color: var(--red);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 12px;
+      display: none;
+      line-height: 1.4;
+    }
+    .login-error.show {
+      display: block;
+    }
+
+    /* ── Footer links ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--txt2);
+    }
+    .login-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .login-footer a:hover {
+      opacity: 0.8;
+    }
+    .login-bottom-link {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 12px;
+    }
+    .login-bottom-link a {
+      color: var(--txt3);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .login-bottom-link a:hover {
+      color: var(--txt2);
+    }
+
+    /* ── Responsive ── */
     @media (max-width: 480px) {
-      .login-wrap { padding: 16px; max-height: 100vh; overflow-y: auto; }
-      .login-card { padding: 28px 20px 24px; max-height: none; }
-      .login-logo img { width: 36px; height: 36px; }
-      .login-logo-text .title { font-size: 17px; }
-      .login-logo-text .sub { font-size: 11px; }
-      .form-group input { padding: 9px 12px; font-size: 13px; }
-      .login-btn { padding: 11px; font-size: 14px; }
-      .shape-1 { width: 300px; height: 300px; }
-      .shape-2 { width: 250px; height: 250px; }
-      .shape-3 { width: 180px; height: 180px; }
-      .shape-4 { width: 140px; height: 140px; }
-      .shape-5 { width: 100px; height: 100px; }
+      .login-wrap {
+        padding: 24px 16px;
+        align-items: flex-start;
+        padding-top: 60px;
+      }
+      .login-card {
+        padding: 32px 20px 28px;
+        border-radius: 16px;
+      }
+      .login-logo img {
+        width: 36px;
+        height: 36px;
+      }
+      .login-logo-text .title {
+        font-size: 18px;
+      }
+      .login-heading {
+        font-size: 18px;
+      }
+      .form-group input {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .login-btn {
+        padding: 12px;
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="bg-shapes">
-    <div class="shape shape-1"></div>
-    <div class="shape shape-2"></div>
-    <div class="shape shape-3"></div>
-    <div class="shape shape-4"></div>
-    <div class="shape shape-5"></div>
-    <div class="shape shape-6"></div>
-  </div>
-  <a href="/" class="back-to-landing" title="Back to Home">← Home</a>
+
+  <!-- Background layers -->
+  <canvas id="fibreCanvas"></canvas>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Back button -->
+  <a href="/" class="back-home">&larr; Home</a>
+
+  <!-- Login card -->
   <div class="login-wrap">
     <div class="login-card">
-      <a href="/" class="login-logo" style="text-decoration:none">
+
+      <a href="/" class="login-logo">
         <img src="/static/oasis.png" alt="OASIS-X" />
         <div class="login-logo-text">
           <div class="title">OASIS-X</div>
           <div class="sub">Autonomous Fibre Fault Healing System</div>
         </div>
       </a>
-      <div class="login-title">Sign in</div>
+
+      <div class="terminal-prefix">
+        <span>oasis@x:~$</span>
+        <span class="cursor"></span>
+      </div>
+
+      <h1 class="login-heading">Sign in to your account</h1>
+
       <form id="login-form" autocomplete="off">
         <div class="form-group">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
         </div>
+
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+          <div class="input-wrap">
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="toggle-pw" id="togglePw" aria-label="Show password">
+              <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:none">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        <div class="form-options">
+          <label>
+            <input type="checkbox" id="remember" />
+            Remember me
+          </label>
+          <a href="#" id="forgot-password-link">Forgot password?</a>
+        </div>
+
         <div class="login-error" id="login-error"></div>
-        <button type="submit" class="login-btn" id="login-btn">
-          <span class="login-spinner">⏳</span>
-          <span class="login-text">Sign In</span>
-        </button>
+
+        <button type="submit" class="login-btn" id="login-btn">Sign In</button>
       </form>
+
       <div class="login-footer">
-        Don't have an account? <a href="/static/signup.html" style="color:var(--accent);text-decoration:none;">Create one</a>
+        Don't have an account? <a href="/static/signup.html">Sign up</a>
       </div>
-      <div class="login-footer" style="margin-top:6px;">
-        <a href="#" id="forgot-password-link" style="color:var(--accent);text-decoration:none;">Forgot password?</a>
+      <div class="login-bottom-link">
+        <a href="/">Back to home</a>
       </div>
-      <div class="login-footer" style="margin-top:6px;">SWIFT FHS v1.0 &mdash; powered by Swift Solutions</div>
+
     </div>
   </div>
+
   <!-- Forgot Password Modal -->
-  <div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:400px;width:90%;position:relative;">
-      <button onclick="document.getElementById('forgot-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--txt2);font-size:18px;cursor:pointer;">✕</button>
-      <h3 style="font-size:18px;font-weight:700;color:var(--txt);margin-bottom:8px;">Reset Password</h3>
-      <p style="font-size:13px;color:var(--txt2);margin-bottom:20px;">Enter your email address and we'll send you a link to reset your password.</p>
+  <div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:rgba(8,20,32,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;max-width:400px;width:90%;position:relative;backdrop-filter:blur(20px);">
+      <button onclick="document.getElementById('forgot-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#6b8aa8;font-size:18px;cursor:pointer;transition:color 0.2s;" onmouseover="this.style.color='#e8f0f8'" onmouseout="this.style.color='#6b8aa8'">&#10005;</button>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#e8f0f8;margin-bottom:8px;">Reset Password</h3>
+      <p style="font-size:13px;color:#6b8aa8;margin-bottom:20px;">Enter your email address and we'll send you a link to reset your password.</p>
       <div style="margin-bottom:16px;">
-        <label style="display:block;font-size:12px;font-weight:500;color:var(--txt2);margin-bottom:6px;">Email Address</label>
-        <input type="email" id="forgot-email" placeholder="Enter your email" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(16,35,61,0.7);color:var(--txt);font-size:14px;font-family:var(--font);outline:none;" />
+        <label style="display:block;font-size:12px;font-weight:500;color:#6b8aa8;margin-bottom:6px;">Email Address</label>
+        <input type="email" id="forgot-email" placeholder="Enter your email" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(3,10,18,0.6);color:#e8f0f8;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(0,255,136,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'" />
       </div>
       <div id="forgot-message" style="font-size:13px;margin-bottom:12px;display:none;"></div>
-      <button onclick="handleForgotPassword()" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#060f1a;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);">Send Reset Link</button>
+      <button onclick="handleForgotPassword()" style="width:100%;padding:12px;border-radius:10px;border:none;background:#00ff88;color:#030a12;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Send Reset Link</button>
     </div>
   </div>
+
   <script>
-    /* ── Forgot Password ── */
-    document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
+    /* ── Canvas fibre-optic particles ── */
+    (function() {
+      const canvas = document.getElementById('fibreCanvas');
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const DOTS = 18;
+      const dots = [];
+
+      for (let i = 0; i < DOTS; i++) {
+        dots.push({
+          x: Math.random() * (w || window.innerWidth),
+          y: Math.random() * (h || window.innerHeight),
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.15 - 0.1,
+          r: Math.random() * 1.5 + 0.8,
+          alpha: Math.random() * 0.25 + 0.08,
+          color: Math.random() > 0.3
+            ? `rgba(0, 255, 136, ALPHA)`
+            : `rgba(59, 130, 246, ALPHA)`,
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+
+        for (const d of dots) {
+          d.x += d.vx;
+          d.y += d.vy;
+
+          if (d.x < -10) d.x = w + 10;
+          if (d.x > w + 10) d.x = -10;
+          if (d.y < -10) d.y = h + 10;
+          if (d.y > h + 10) d.y = -10;
+
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.fillStyle = d.color.replace('ALPHA', d.alpha);
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    /* ── Password show/hide toggle ── */
+    const pwInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('togglePw');
+    const eyeOpen = document.getElementById('eyeOpen');
+    const eyeClosed = document.getElementById('eyeClosed');
+
+    toggleBtn.addEventListener('click', function() {
+      const isPassword = pwInput.type === 'password';
+      pwInput.type = isPassword ? 'text' : 'password';
+      eyeOpen.style.display = isPassword ? 'none' : 'block';
+      eyeClosed.style.display = isPassword ? 'block' : 'none';
+    });
+
+    /* ── Forgot Password modal ── */
+    document.getElementById('forgot-password-link').addEventListener('click', function(e) {
       e.preventDefault();
       document.getElementById('forgot-modal').style.display = 'flex';
     });
 
-    async function handleForgotPassword() {
+    document.getElementById('forgot-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.style.display = 'none';
+    });
+
+    function handleForgotPassword() {
       const email = document.getElementById('forgot-email').value.trim();
       const msg = document.getElementById('forgot-message');
       if (!email) {
-        msg.textContent = 'Please enter your email address';
-        msg.style.color = 'var(--red)';
+        msg.textContent = 'Please enter your email address.';
+        msg.style.color = '#ef4444';
         msg.style.display = 'block';
         return;
       }
-      // For demo purposes, show a success message
-      msg.textContent = 'If an account exists with this email, a password reset link has been sent. Check your inbox.';
-      msg.style.color = 'var(--accent)';
+      msg.textContent = 'If an account exists with this email, a password reset link has been sent.';
+      msg.style.color = '#00ff88';
       msg.style.display = 'block';
-      setTimeout(() => {
+      setTimeout(function() {
         document.getElementById('forgot-modal').style.display = 'none';
         msg.style.display = 'none';
+        document.getElementById('forgot-email').value = '';
       }, 3000);
     }
-  </script>
-  <script>
-    /* ── Interactive water-like blobs ── */
-    const shapes = document.querySelectorAll('.bg-shapes .shape');
-    const container = document.querySelector('.bg-shapes');
-    const state = [];
 
-    shapes.forEach((el, i) => {
-      const cs = getComputedStyle(el);
-      state[i] = {
-        baseOpacity: parseFloat(cs.opacity),
-        br: cs.borderRadius,
-        x: 0,
-        y: 0,
-        vx: 0,
-        vy: 0,
-      };
-    });
-
-    let rafId = null;
-    let mouseX = 0, mouseY = 0;
-    let lastMouseMove = 0;
-
-    document.addEventListener('mousemove', (e) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      lastMouseMove = Date.now();
-    });
-
-    function animate() {
-      const now = Date.now();
-      const timeSinceMove = now - lastMouseMove;
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
-
-      shapes.forEach((el, i) => {
-        const s = state[i];
-        const f = 6 + i * 3;
-        const rect = el.getBoundingClientRect();
-        const ecx = rect.left + rect.width / 2;
-        const ecy = rect.top + rect.height / 2;
-        const dist = Math.hypot(mouseX - ecx, mouseY - ecy);
-        const close = Math.max(0, 1 - dist / 250);
-
-        // Water-like physics: gentle drift + mouse influence
-        const dx = (mouseX - cx) / cx;
-        const dy = (mouseY - cy) / cy;
-        const targetX = dx * f + close * (Math.random() - 0.5) * 15;
-        const targetY = dy * f + close * (Math.random() - 0.5) * 15;
-
-        // Smooth spring physics for fluid motion
-        s.vx += (targetX - s.x) * 0.02;
-        s.vy += (targetY - s.y) * 0.02;
-        s.vx *= 0.92; // damping
-        s.vy *= 0.92;
-        s.x += s.vx;
-        s.y += s.vy;
-
-        // Water-like border radius morphing
-        const br = [
-          [42,58,65,35,48,52,48,52], [55,45,38,62,52,58,42,48],
-          [62,38,48,52,38,55,45,62], [30,70,70,30,30,30,70,70],
-          [67,33,47,53,57,44,56,43], [50,50,50,50,50,50,50,50]
-        ][i];
-        const lerp = (a, b, t) => a + (b - a) * t;
-        const wave = Math.sin(now / 1000 + i) * 0.5 + 0.5;
-        const br1 = br.slice(0,4).map((v, idx) => lerp(v, 50 - idx * 3 + wave * 10, close * 0.3) + '%').join(' ');
-        const br2 = br.slice(4).map((v, idx) => lerp(v, 50 + idx * 2 + wave * 10, close * 0.3) + '%').join(' ');
-
-        el.style.transform = `translate(${s.x}px, ${s.y}px)`;
-        el.style.borderRadius = br1 + ' / ' + br2;
-        el.style.opacity = Math.min(1, s.baseOpacity + close * 0.3);
-      });
-
-      rafId = requestAnimationFrame(animate);
-    }
-    animate();
-
-    container.addEventListener('click', (e) => {
-      const target = e.target.closest('.shape');
-      if (!target) return;
-      const rect = target.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-      const color = getComputedStyle(target).background;
-      target.style.transition = 'opacity 0.3s';
-      target.style.opacity = '0';
-      setTimeout(() => target.remove(), 300);
-      for (let i = 0; i < 24; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        const size = 4 + Math.random() * 24;
-        const angle = Math.random() * 2 * Math.PI;
-        const dist = 80 + Math.random() * 350;
-        p.style.cssText = `
-          left:${cx - size/2}px; top:${cy - size/2}px;
-          width:${size}px; height:${size}px;
-          background:${color};
-          --px:${Math.cos(angle) * dist}px; --py:${Math.sin(angle) * dist}px;
-          border: 1px solid rgba(0,255,136,0.15);
-        `;
-        container.appendChild(p);
-        setTimeout(() => p.remove(), 1000);
-      }
-    });
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    /* ── Login form submission ── */
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+
       const btn = document.getElementById('login-btn');
       const err = document.getElementById('login-error');
-      const logo = document.querySelector('.login-logo img');
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      if (!username || !password) { err.textContent = 'Please enter username and password'; err.classList.add('show'); return; }
-      btn.classList.add('loading');
+
+      if (!username || !password) {
+        err.textContent = 'Please enter both username and password.';
+        err.classList.add('show');
+        return;
+      }
+
       btn.disabled = true;
-      logo.classList.add('loading');
+      btn.textContent = 'Signing in...';
       err.classList.remove('show');
+
       try {
-        const r = await fetch('/api/auth/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username: username, password: password }),
         });
-        const data = await r.json();
-        if (!r.ok) { err.textContent = data.detail || 'Login failed'; err.classList.add('show'); return; }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          err.textContent = data.detail || 'Login failed. Please check your credentials.';
+          err.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
         localStorage.setItem('token', data.access_token);
-        localStorage.setItem('_login_ts', String(Date.now()));
         window.location.href = '/dashboard';
-      } catch (e) {
+      } catch (error) {
         err.textContent = 'Connection error. Is the server running?';
         err.classList.add('show');
-      } finally {
-        btn.classList.remove('loading');
         btn.disabled = false;
-        logo.classList.remove('loading');
+        btn.textContent = 'Sign In';
       }
     });
   </script>
