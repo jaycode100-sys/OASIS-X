@@ -1249,6 +1249,10 @@ function afterAuth() {
     profileDropdown.classList.add('hidden');
     window.location.href = '/static/blog.html';
   });
+  document.getElementById('dropdown-status').addEventListener('click', () => {
+    profileDropdown.classList.add('hidden');
+    window.location.href = '/static/status.html';
+  });
   document.getElementById('dropdown-support').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
     document.getElementById('complaint-toggle').click();

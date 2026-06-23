@@ -95,6 +95,14 @@ def cases_page():
     return JSONResponse(status_code=404, content={"detail": "cases.html not found"})
 
 
+@app.get("/status", include_in_schema=False)
+def status_page():
+    path = _os.path.join(STATIC_DIR, "status.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return JSONResponse(status_code=404, content={"detail": "status.html not found"})
+
+
 # ── Static files mount (MUST be LAST — mounts are catch-all) ──
 if _os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
