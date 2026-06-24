@@ -75,6 +75,19 @@
     }
 
     /* ── Light theme overrides ── */
+    body, .feature-card, .step-card, .stat-card, .network-container, .terminal-wrapper,
+    .hero-badge, .header, .nexus-chat-bubble, .footer, .hero-title, .hero-subtitle,
+    .section-title, .section-label, .feature-title, .feature-desc, .step-title, .step-desc,
+    .stat-value, .stat-label, .terminal-prompt, .terminal-text, .btn-primary, .btn-outline-lg,
+    .proof-badge, .grid-bg {
+      transition: background-color 3s ease, color 3s ease, border-color 3s ease, box-shadow 3s ease, opacity 3s ease;
+    }
+    .theme-overlay {
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      opacity: 0; transition: opacity 1.2s ease;
+    }
+    .theme-overlay.active { opacity: 1; }
+
     [data-theme="light"] .grid-bg {
       background-image:
         linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
@@ -1008,6 +1021,7 @@
   </style>
 </head>
 <body>
+  <div class="theme-overlay" id="theme-overlay"></div>
   <canvas id="fibreCanvas"></canvas>
   <div class="grid-bg"></div>
   <div class="orb orb-1"></div>
@@ -1190,15 +1204,32 @@
   </footer>
 
   <script>
-    // ── Theme toggle ──
+    // ── Theme toggle (cinematic 3s transition) ──
     (function () {
       const saved = localStorage.getItem('landing_theme') || 'dark';
       if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
       const btn = document.getElementById('landing-theme-toggle');
+      const overlay = document.getElementById('theme-overlay');
+      let transitioning = false;
       if (btn) btn.addEventListener('click', () => {
-        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-        if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('landing_theme', 'dark'); }
-        else { document.documentElement.setAttribute('data-theme', 'light'); localStorage.setItem('landing_theme', 'light'); }
+        if (transitioning) return;
+        transitioning = true;
+        // Phase 1: fade overlay to black (1.2s)
+        overlay.style.background = document.documentElement.getAttribute('data-theme') === 'light'
+          ? 'linear-gradient(135deg, #030a12, #081420)'
+          : 'linear-gradient(135deg, #f8fafc, #e2e8f0)';
+        overlay.classList.add('active');
+        // Phase 2: swap theme at midpoint (1.5s)
+        setTimeout(() => {
+          const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+          if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('landing_theme', 'dark'); }
+          else { document.documentElement.setAttribute('data-theme', 'light'); localStorage.setItem('landing_theme', 'light'); }
+        }, 1500);
+        // Phase 3: fade overlay out (remaining 1.5s)
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          setTimeout(() => { transitioning = false; }, 1200);
+        }, 1800);
       });
     })();
 
