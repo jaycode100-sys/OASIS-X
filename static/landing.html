@@ -80,13 +80,14 @@
     .section-title, .section-label, .feature-title, .feature-desc, .step-title, .step-desc,
     .stat-value, .stat-label, .terminal-prompt, .terminal-text, .btn-primary, .btn-outline-lg,
     .proof-badge, .grid-bg {
-      transition: background-color 3s ease, color 3s ease, border-color 3s ease, box-shadow 3s ease, opacity 3s ease;
+      transition: background-color 1.5s ease, color 1.5s ease, border-color 1.5s ease, box-shadow 1.5s ease, opacity 1.5s ease;
     }
     .theme-overlay {
       position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-      opacity: 0; transition: opacity 1.2s ease;
+      opacity: 0; transition: opacity 0.6s ease; display: none;
+      background: rgba(0,0,0,0.4);
     }
-    .theme-overlay.active { opacity: 1; }
+    .theme-overlay.active { opacity: 1; display: block; }
 
     [data-theme="light"] .grid-bg {
       background-image:
@@ -1183,7 +1184,7 @@
           <div class="footer-col-title">Product</div>
           <a href="#features">Features</a>
           <a href="#how-it-works">How It Works</a>
-          <a href="#stats">Impact</a>
+          <a href="/static/status.html">Impact</a>
         </div>
         <div class="footer-col">
           <div class="footer-col-title">Account</div>
@@ -1204,7 +1205,7 @@
   </footer>
 
   <script>
-    // ── Theme toggle (cinematic 3s transition) ──
+    // ── Theme toggle (1.5s fade transition) ──
     (function () {
       const saved = localStorage.getItem('landing_theme') || 'dark';
       if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
@@ -1214,22 +1215,19 @@
       if (btn) btn.addEventListener('click', () => {
         if (transitioning) return;
         transitioning = true;
-        // Phase 1: fade overlay to black (1.2s)
-        overlay.style.background = document.documentElement.getAttribute('data-theme') === 'light'
-          ? 'linear-gradient(135deg, #030a12, #081420)'
-          : 'linear-gradient(135deg, #f8fafc, #e2e8f0)';
+        overlay.style.display = 'block';
+        // Force reflow so display:block applies before adding active
+        overlay.offsetHeight;
         overlay.classList.add('active');
-        // Phase 2: swap theme at midpoint (1.5s)
         setTimeout(() => {
           const isLight = document.documentElement.getAttribute('data-theme') === 'light';
           if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('landing_theme', 'dark'); }
           else { document.documentElement.setAttribute('data-theme', 'light'); localStorage.setItem('landing_theme', 'light'); }
-        }, 1500);
-        // Phase 3: fade overlay out (remaining 1.5s)
+        }, 600);
         setTimeout(() => {
           overlay.classList.remove('active');
-          setTimeout(() => { transitioning = false; }, 1200);
-        }, 1800);
+          setTimeout(() => { overlay.style.display = 'none'; transitioning = false; }, 600);
+        }, 800);
       });
     })();
 

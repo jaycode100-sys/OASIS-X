@@ -230,3 +230,140 @@ class NotificationService:
 
 # Singleton instance
 notification_service = NotificationService()
+
+
+# ── Telegram /start Handler & Background Polling ───────────────────────────────
+
+import asyncio, threading, time
+
+_last_update_id = 0
+
+async def _handle_start_message(chat_id: int, username: str, first_name: str):
+    """Match Telegram username to OASIS-X account, store chat ID, send welcome."""
+    from data.database import _get_conn, log_activity
+    import json
+
+    conn = _get_conn()
+    # Look up user by telegram username in profile settings
+    profiles = conn.execute("SELECT user_id, settings_json, display_name FROM user_profiles").fetchall()
+    matched_user = None
+    for p in profiles:
+        try:
+            settings = json.loads(p["settings_json"]) if p["settings_json"] else {}
+        except Exception:
+            continue
+        tg = settings.get("telegram", "").lstrip("@").lower()
+        if tg and tg == username.lower():
+            matched_user = p
+            break
+
+    if matched_user:
+        # Store chat_id in profile
+        try:
+            settings = json.loads(matched_user["settings_json"]) if matched_user["settings_json"] else {}
+        except Exception:
+            settings = {}
+        settings["telegram_chat_id"] = str(chat_id)
+        settings["telegram"] = f"@{username}"
+        conn.execute(
+            "UPDATE user_profiles SET settings_json=? WHERE user_id=?",
+            (json.dumps(settings), matched_user["user_id"]),
+        )
+        conn.commit()
+
+        # Send welcome message
+        welcome = (
+            f"Welcome to OASIS-X, {first_name or username}!\n\n"
+            "Your Telegram account has been linked successfully.\n"
+            "You will now receive incident alerts and daily summaries here.\n\n"
+            "Type /status to check current network status.\n"
+            "Type /help for available commands."
+        )
+        await notification_service.send_telegram(welcome, chat_id=str(chat_id))
+
+        # Log to activity feed
+        log_activity(
+            act_type="system",
+            message=f"Telegram linked: @{username} (chat_id={chat_id})",
+            html=f'Telegram linked: <strong>@{username}</strong> (chat_id={chat_id})',
+            user_id=matched_user["user_id"],
+            username=username,
+        )
+        logger.info("Telegram linked: @%s -> user_id=%s", username, matched_user["user_id"])
+    else:
+        # No matching account found
+        msg = (
+            f"Hello {first_name or username}!\n\n"
+            "No OASIS-X account found with your Telegram username.\n"
+            "Please update your profile in OASIS-X Dashboard with your Telegram username "
+            "(@{username}), then send /start again.\n\n"
+            "Need help? Contact your admin."
+        )
+        await notification_service.send_telegram(msg, chat_id=str(chat_id))
+
+        # Log to activity feed (system-level, no user_id)
+        log_activity(
+            act_type="system",
+            message=f"Telegram /start from unknown user: @{username} (chat_id={chat_id})",
+            html=f'Telegram /start from unknown: <strong>@{username}</strong>',
+        )
+        logger.info("Telegram /start from unknown user: @%s", username)
+
+
+async def _process_telegram_update(update: dict):
+    """Process a single Telegram update."""
+    msg = update.get("message") or update.get("channel_post")
+    if not msg:
+        return
+    text = msg.get("text", "")
+    chat = msg.get("chat", {})
+    chat_id = chat.get("id")
+    username = chat.get("username", "")
+    first_name = chat.get("first_name", "")
+
+    if text.startswith("/start") and username and chat_id:
+        await _handle_start_message(chat_id, username, first_name)
+
+
+async def _poll_telegram():
+    """Long-poll for Telegram updates in background."""
+    global _last_update_id
+    if not TELEGRAM_BOT_TOKEN:
+        return
+
+    logger.info("Starting Telegram polling (bot token configured)")
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+
+    while True:
+        try:
+            params = {"offset": _last_update_id + 1, "timeout": 30, "allowed_updates": '["message"]'}
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params=params, timeout=35.0)
+                data = resp.json()
+                if data.get("ok") and data.get("result"):
+                    for update in data["result"]:
+                        _last_update_id = max(_last_update_id, update["update_id"])
+                        await _process_telegram_update(update)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("Telegram poll error: %s", e)
+            await asyncio.sleep(5)
+
+
+_poll_task = None
+
+def start_telegram_polling():
+    """Start background Telegram polling."""
+    global _poll_task
+    if not TELEGRAM_BOT_TOKEN:
+        logger.info("Telegram polling skipped (no bot token)")
+        return
+    # Start in a daemon thread with its own event loop
+    def _run():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(_poll_telegram())
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    logger.info("Telegram polling started")

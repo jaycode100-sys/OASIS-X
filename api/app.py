@@ -126,6 +126,9 @@ def startup():
         logger.info("STATIC_DIR = %s (exists=%s)", STATIC_DIR, _os.path.isdir(STATIC_DIR))
         for f in ["landing.html", "index.html", "login.html", "cases.html"]:
             logger.info("  %s: %s", f, _os.path.isfile(_os.path.join(STATIC_DIR, f)))
+        # Start Telegram polling
+        from api.notifications import start_telegram_polling
+        start_telegram_polling()
     except Exception as e:
         logger.critical("Startup failed: %s", e)
         sys.exit(1)

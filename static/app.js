@@ -871,6 +871,8 @@ function toggleChat() {
   p.classList.remove('minimized');
   p.classList.toggle('hidden');
   if(!p.classList.contains('hidden')) document.getElementById('chat-input').focus();
+  const nw = document.getElementById('nexus-chat-widget');
+  if (p.classList.contains('hidden') && nw) { nw.style.display = ''; const nb = document.getElementById('nexus-chat-bubble'); if (nb) nb.style.display = ''; }
 }
 
 function closeAllPanels(except) {
@@ -879,7 +881,7 @@ function closeAllPanels(except) {
   const profileDropdown = document.getElementById('profile-dropdown');
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebar-overlay');
-  if (except !== 'chat' && chatPanel) { chatPanel.classList.add('hidden'); chatPanel.classList.remove('minimized'); }
+  if (except !== 'chat' && chatPanel) { chatPanel.classList.add('hidden'); chatPanel.classList.remove('minimized'); const nw = document.getElementById('nexus-chat-widget'); if (nw) { nw.style.display = ''; const nb = document.getElementById('nexus-chat-bubble'); if (nb) nb.style.display = ''; } }
   if (except !== 'complaint' && complaintPanel) { complaintPanel.classList.add('hidden'); complaintPanel.classList.add('minimized'); const fab = document.getElementById('complaint-toggle'); if (fab) fab.classList.remove('panel-open'); }
   if (except !== 'profile' && profileDropdown) profileDropdown.classList.add('hidden');
   if (except !== 'sidebar' && sidebar) { sidebar.classList.remove('open'); if (sidebarOverlay) sidebarOverlay.classList.remove('active'); }
@@ -1181,7 +1183,8 @@ function afterAuth() {
   // Nexus chat widget
   const nexusFab = document.getElementById('nexus-fab');
   const nexusBubble = document.getElementById('nexus-chat-bubble');
-  if (nexusFab) nexusFab.addEventListener('click', () => { if (nexusBubble) nexusBubble.style.display = 'none'; closeAllPanels('chat'); const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
+  const nexusWidget = document.getElementById('nexus-chat-widget');
+  if (nexusFab) nexusFab.addEventListener('click', () => { if (nexusWidget) nexusWidget.style.display = 'none'; closeAllPanels('chat'); const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
   document.getElementById('chat-close').addEventListener('click', toggleChat);
   document.getElementById('chat-minimize').addEventListener('click', minimizeChat);
   document.getElementById('chat-send').addEventListener('click', doChat);
@@ -1445,10 +1448,24 @@ function getInitials(name) {
 }
 
 function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('oasis-theme', theme);
-  const lbl = document.getElementById('theme-lbl');
-  if (lbl) lbl.textContent = theme === 'light' ? 'Light' : 'Dark';
+  let overlay = document.getElementById('theme-fade-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'theme-fade-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.5s ease;background:rgba(0,0,0,0.35);';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.opacity = '1';
+  setTimeout(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('oasis-theme', theme);
+    const lbl = document.getElementById('theme-lbl');
+    if (lbl) lbl.textContent = theme === 'light' ? 'Light' : 'Dark';
+  }, 300);
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 500);
+  }, 500);
 }
 
 /* ── Profile UI (greeting + avatar in header) ── */
@@ -1556,14 +1573,18 @@ function toggleComplaintPanel() {
     const adminForm = document.getElementById('new-case-admin-form');
     const userForm = document.getElementById('new-case-user-form');
     const newBtn = document.getElementById('complaint-new-btn');
+    const newDropdown = document.getElementById('new-msg-dropdown');
     if (S.user?.role === 'superadmin') {
       if (adminForm) adminForm.style.display = '';
       if (userForm) userForm.style.display = 'none';
       if (newBtn) newBtn.style.display = '';
+      if (newDropdown) newDropdown.classList.add('hidden');
     } else {
       if (adminForm) adminForm.style.display = 'none';
       if (userForm) userForm.style.display = '';
       if (newBtn) newBtn.style.display = 'none';
+      // Auto-show the new case form for regular users
+      if (newDropdown) newDropdown.classList.remove('hidden');
     }
   } else {
     if (_casePollTimer) { clearInterval(_casePollTimer); _casePollTimer = null; }
