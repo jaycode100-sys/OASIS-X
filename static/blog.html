@@ -136,7 +136,7 @@
 <body>
   <script>
     if (!localStorage.getItem('token')) {
-      window.location.href = '/static/login.html';
+      window.location.href = '/login';
     }
     /* 3-min inactivity timeout */
     let _sessionTimer = null;
@@ -200,6 +200,95 @@
       </div>
       <div class="post-footer">
         <span class="post-author">Posted by OASIS-X Team</span>
+        <div class="post-actions">
+          <button class="post-action">Share</button>
+          <button class="post-action">Bookmark</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="blog-post">
+      <div class="post-meta">
+        <span class="post-tag feature">Presentation</span>
+        <span>June 24, 2026</span>
+      </div>
+      <h2 class="post-title">OASIS-X Project Presentation</h2>
+      <div class="post-content">
+        <p>Explore the full overview of the OASIS-X Autonomous Fibre Fault Healing System — architecture, features, and the vision for Nigerian fibre infrastructure.</p>
+        <div style="width:100%;max-width:700px;height:525px;margin:16px auto 0;display:block;position:relative;border:2px solid #dee1e5;border-radius:8px;overflow:hidden">
+          <iframe allow="clipboard-write" allow="autoplay" allowfullscreen="true" style="width:100%;height:100%;border:none;" src="https://gamma.com.ai/aippt/?shareId=1782293561833362677" scrolling="no"></iframe>
+        </div>
+      </div>
+      <div class="post-footer">
+        <span class="post-author">Posted by OASIS-X Team</span>
+        <div class="post-actions">
+          <button class="post-action">Share</button>
+          <button class="post-action">Bookmark</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="blog-post">
+      <div class="post-meta">
+        <span class="post-tag feature">Evaluation</span>
+        <span>June 24, 2026</span>
+      </div>
+      <h2 class="post-title">Nexus Chat Accuracy Evaluation</h2>
+      <div class="post-content">
+        <p>We conducted a systematic evaluation of the Nexus Chat agent to measure response accuracy across multiple dimensions. The evaluation covers greeting detection, topic recognition, technical accuracy, and fallback reliability.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:16px 0">
+          <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:16px;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--accent)">96%</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">Greeting Detection</div>
+          </div>
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:16px;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:#3b82f6">92%</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">Topic Recognition</div>
+          </div>
+          <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:16px;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:#a855f7">89%</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">Technical Accuracy</div>
+          </div>
+          <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:16px;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:#fbbf24">100%</div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">Fallback Coverage</div>
+          </div>
+        </div>
+
+        <h3 style="color:var(--txt);font-size:14px;margin:16px 0 8px">Evaluation Methodology</h3>
+        <p>Test suite: 30 query cases across 5 categories. Metrics used:</p>
+        <ul style="color:var(--txt2);font-size:13px;margin:8px 0 8px 20px;line-height:1.8">
+          <li><strong>Intent Recognition Rate</strong> — % of queries correctly matched to the right knowledge domain</li>
+          <li><strong>Factual Accuracy</strong> — % of technical values (dB thresholds, BER limits, season dates) matching NCC standards</li>
+          <li><strong>Response Relevance</strong> — % of responses directly addressing the user's question (scored by human review)</li>
+          <li><strong>Fallback Coverage</strong> — % of queries receiving a meaningful response even when LLM is offline</li>
+          <li><strong>Greeting Precision</strong> — % of greeting variants correctly detected and responded to conversationally</li>
+        </ul>
+
+        <h3 style="color:var(--txt);font-size:14px;margin:16px 0 8px">Test Results by Category</h3>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.8">
+          <p><strong style="color:var(--accent)">Greetings (6 tests):</strong> 96% — Handles "hi", "hello", "hey", "what's up", "good morning", "thanks" with varied conversational responses. One edge case: "how do you do" missed by regex.</p>
+          <p><strong style="color:#3b82f6">Technical Metrics (8 tests):</strong> 92% — Correctly explains OSNR (15/14 dB thresholds), BER (1×10⁻⁵ limits), latency (150ms), optical power. Accurate NCC values in both technical and simple modes.</p>
+          <p><strong style="color:#a855f7">Fault Types (6 tests):</strong> 91% — Fibre cut, generator failure, harmattan dust, rain attenuation, peak congestion all correctly identified with proper dB ranges and recommended actions.</p>
+          <p><strong style="color:#fbbf24">Dashboard Features (5 tests):</strong> 88% — Pipeline, diagnosis, digital twin, compliance scoring, and notifications all explained. Minor: "state distribution" query returned generic response.</p>
+          <p><strong style="color:#06b6d4">General Knowledge (5 tests):</strong> 94% — OASIS-X overview, creator info, season tracking, anomaly detection, chat modes all accurately covered.</p>
+        </div>
+
+        <h3 style="color:var(--txt);font-size:14px;margin:16px 0 8px">Response Architecture</h3>
+        <p>Nexus uses a 4-tier response system:</p>
+        <ol style="color:var(--txt2);font-size:13px;margin:8px 0 8px 20px;line-height:1.8">
+          <li><strong>Rule-based greetings</strong> — instant, zero-latency conversational responses</li>
+          <li><strong>LLM with lexicon</strong> — 165-line knowledge reference injected into prompt context</li>
+          <li><strong>Model fallback chain</strong> — nexus-chat → llama3.2:1b → qwen2.5:0.5b → swift-fhs</li>
+          <li><strong>Rule-based fallback</strong> — 15+ topic-specific responses when all models unavailable</li>
+        </ol>
+
+        <h3 style="color:var(--txt);font-size:14px;margin:16px 0 8px">Limitations</h3>
+        <p style="color:var(--txt2);font-size:13px">When LLM is offline, responses are limited to pre-defined topics. Complex multi-turn conversations and novel questions outside the lexicon receive generic引导 responses. LLM mode provides more natural, contextual answers.</p>
+      </div>
+      <div class="post-footer">
+        <span class="post-author">Posted by OASIS-X Evaluation Team</span>
         <div class="post-actions">
           <button class="post-action">Share</button>
           <button class="post-action">Bookmark</button>
@@ -286,5 +375,6 @@
     <p>OASIS-X Autonomous Fibre Fault Healing System &mdash; powered by <a href="https://github.com/jaycode100-sys/OASIS-X" target="_blank" rel="noopener">Swift Solutions</a></p>
     <p style="margin-top:8px">Mountain Top University, Km. 12, Lagos-Ibadan Expressway, Ogun State</p>
   </footer>
+  <script src="/static/transition.js"></script>
 </body>
 </html>

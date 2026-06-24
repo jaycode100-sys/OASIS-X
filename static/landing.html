@@ -116,6 +116,8 @@
     [data-theme="light"] .step-desc { color: #64748b; }
     [data-theme="light"] .stat-value { color: #0f172a; }
     [data-theme="light"] .stat-label { color: #64748b; }
+    [data-theme="light"] .stats-bar { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.08); backdrop-filter: blur(16px); }
+    [data-theme="light"] .stat-divider { background: rgba(0,0,0,0.1); }
     [data-theme="light"] .terminal-wrapper { background: rgba(255,255,255,0.8); }
     [data-theme="light"] .terminal-prompt { color: #059669; }
     [data-theme="light"] .terminal-text { color: #1e293b; }
@@ -1037,7 +1039,7 @@
     <nav class="header-nav">
       <a href="#features">Features</a>
       <a href="#how-it-works">How It Works</a>
-      <a href="https://oasis-x.onrender.com/static/status.html">Impact</a>
+      <a href="https://oasis-x.onrender.com/status">Impact</a>
       <a href="#contact">Contact</a>
     </nav>
     <div class="header-actions">
@@ -1045,8 +1047,8 @@
         <svg class="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         <svg class="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <a href="/static/login.html" class="btn btn-ghost">Sign In</a>
-      <a href="/static/signup.html" class="btn btn-primary">Get Started</a>
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/signup" class="btn btn-primary">Get Started</a>
     </div>
   </header>
 
@@ -1065,7 +1067,7 @@
       <span class="terminal-text" id="typingText"></span>
     </div>
     <div class="hero-actions">
-      <a href="/static/signup.html" class="btn btn-primary btn-lg">Get Started</a>
+      <a href="/signup" class="btn btn-primary btn-lg">Get Started</a>
       <a href="#how-it-works" class="btn btn-outline-lg">Learn More</a>
     </div>
     <div class="proof-badges">
@@ -1073,6 +1075,22 @@
       <span class="proof-badge"><span class="proof-badge-icon blue"></span> NCC Compliant</span>
       <span class="proof-badge"><span class="proof-badge-icon cyan"></span> 24/7 AI</span>
       <span class="proof-badge"><span class="proof-badge-icon purple"></span> 5 Fault Types</span>
+    </div>
+    <!-- Live Demo Video Placeholder -->
+    <div style="margin-top:48px;width:100%;max-width:800px;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:rgba(8,20,32,0.6);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center">
+      <video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;display:none" id="demo-video">
+        <source src="/static/demo.mp4" type="video/mp4" />
+      </video>
+      <div id="demo-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:32px">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(0,255,136,0.1);border:2px solid rgba(0,255,136,0.3);display:flex;align-items:center;justify-content:center">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:600;color:var(--txt);margin-bottom:4px">Live Demo</div>
+          <div style="font-size:13px;color:var(--txt2)">See OASIS-X in action — autonomous fault detection, diagnosis, and healing</div>
+        </div>
+        <div style="font-size:11px;color:var(--txt3);background:rgba(255,255,255,0.05);padding:6px 14px;border-radius:8px">Video coming soon</div>
+      </div>
     </div>
   </section>
 
@@ -1184,12 +1202,12 @@
           <div class="footer-col-title">Product</div>
           <a href="#features">Features</a>
           <a href="#how-it-works">How It Works</a>
-          <a href="/static/status.html">Impact</a>
+          <a href="/status">Impact</a>
         </div>
         <div class="footer-col">
           <div class="footer-col-title">Account</div>
-          <a href="/static/login.html">Sign In</a>
-          <a href="/static/signup.html">Get Started</a>
+          <a href="/login">Sign In</a>
+          <a href="/signup">Get Started</a>
         </div>
         <div class="footer-col">
           <div class="footer-col-title">Contact</div>
@@ -1523,5 +1541,6 @@
       }, 2000);
     })();
   </script>
+  <script src="/static/transition.js"></script>
 </body>
 </html>

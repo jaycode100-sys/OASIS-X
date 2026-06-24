@@ -103,6 +103,22 @@ def status_page():
     return JSONResponse(status_code=404, content={"detail": "status.html not found"})
 
 
+@app.get("/signup", include_in_schema=False)
+def signup_page():
+    path = _os.path.join(STATIC_DIR, "signup.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return JSONResponse(status_code=404, content={"detail": "signup.html not found"})
+
+
+@app.get("/blog", include_in_schema=False)
+def blog_page():
+    path = _os.path.join(STATIC_DIR, "blog.html")
+    if _os.path.isfile(path):
+        return FileResponse(path)
+    return JSONResponse(status_code=404, content={"detail": "blog.html not found"})
+
+
 # ── Static files mount (MUST be LAST — mounts are catch-all) ──
 if _os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -122,7 +138,10 @@ def startup():
     try:
         init_db()
         seed_default_users()
+        from data.database import DB_PATH, DB_DIR
         logger.info("Startup complete — DB initialised, users seeded")
+        logger.info("DB_DIR  = %s (exists=%s)", DB_DIR, _os.path.isdir(DB_DIR))
+        logger.info("DB_PATH = %s (exists=%s, size=%s bytes)", DB_PATH, _os.path.isfile(DB_PATH), _os.path.getsize(DB_PATH) if _os.path.isfile(DB_PATH) else "N/A")
         logger.info("STATIC_DIR = %s (exists=%s)", STATIC_DIR, _os.path.isdir(STATIC_DIR))
         for f in ["landing.html", "index.html", "login.html", "cases.html"]:
             logger.info("  %s: %s", f, _os.path.isfile(_os.path.join(STATIC_DIR, f)))

@@ -365,7 +365,19 @@
 
             <div class="form-group">
               <label for="email">Email</label>
-              <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+              <div style="display:flex;gap:8px">
+                <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" style="flex:1" />
+                <button type="button" id="send-otp-btn" onclick="sendOTP()" style="padding:0 14px;border-radius:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font-body);transition:all .2s">Send Code</button>
+              </div>
+            </div>
+
+            <div class="form-group hidden" id="otp-group">
+              <label for="otp-input">Verification Code</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="otp-input" placeholder="Enter 6-digit code" maxlength="6" style="flex:1;padding:11px 14px;border-radius:10px;border:1px solid var(--border2);background:rgba(8,20,32,0.6);color:var(--txt);font-size:16px;font-family:var(--font-mono);letter-spacing:4px;text-align:center" autocomplete="one-time-code" />
+                <button type="button" id="verify-otp-btn" onclick="verifyOTP()" style="padding:0 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:#030a12;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font-body);transition:all .2s">Verify</button>
+              </div>
+              <div id="otp-status" style="font-size:12px;margin-top:6px;display:none"></div>
             </div>
 
             <div class="form-group hidden" id="email2-group">
@@ -389,10 +401,14 @@
                 <option value="mtn">MTN Nigeria</option>
                 <option value="globacom">Glo (Globacom)</option>
                 <option value="airtel">Airtel Nigeria</option>
-                <option value="9mobile">9mobile</option>
+                <option value="t2mobile">t2Mobile</option>
                 <option value="ncc">NCC (Nigerian Communications Commission)</option>
                 <option value="other">Other</option>
               </select>
+            </div>
+            <div class="form-group hidden" id="company-other-group">
+              <label for="company-other">Company Name</label>
+              <input type="text" id="company-other" name="company-other" placeholder="Enter your company name" autocomplete="off" />
             </div>
 
             <div class="form-group">
@@ -416,10 +432,10 @@
       </form>
 
       <div class="signup-footer">
-        Already have an account? <a href="/static/login.html">Sign in</a>
+        Already have an account? <a href="/login">Sign in</a>
       </div>
       <div class="signup-footer-links">
-        <a href="/static/login.html#forgot">Forgot password?</a>
+        <a href="/login#forgot">Forgot password?</a>
       </div>
     </div>
   </div>
@@ -430,6 +446,8 @@
     const personalFields = document.getElementById('personal-fields');
     const orgFields = document.getElementById('org-fields');
     const email2Group = document.getElementById('email2-group');
+    const companyLink = document.getElementById('company-link');
+    const companyOtherGroup = document.getElementById('company-other-group');
     let accountType = 'personal';
 
     function updateFormFields() {
@@ -450,6 +468,17 @@
       }
     }
 
+    companyLink.addEventListener('change', function () {
+      if (this.value === 'other') {
+        companyOtherGroup.classList.remove('hidden');
+        document.getElementById('company-other').required = true;
+      } else {
+        companyOtherGroup.classList.add('hidden');
+        document.getElementById('company-other').required = false;
+        document.getElementById('company-other').value = '';
+      }
+    });
+
     toggleOpts.forEach(function (opt) {
       opt.addEventListener('click', function () {
         toggleOpts.forEach(function (o) { o.classList.remove('active'); });
@@ -462,6 +491,98 @@
     /* ── Email validation ── */
     function isValidEmail(email) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    /* ── OTP functions ── */
+    var emailVerified = false;
+
+    async function sendOTP() {
+      var email = document.getElementById('email').value.trim();
+      var err = document.getElementById('signup-error');
+      var btn = document.getElementById('send-otp-btn');
+      var otpGroup = document.getElementById('otp-group');
+      err.classList.remove('show');
+
+      if (!email || !isValidEmail(email)) {
+        err.textContent = 'Please enter a valid email address first';
+        err.classList.add('show');
+        return;
+      }
+
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      try {
+        var r = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        });
+        var data = await r.json();
+        if (!r.ok) {
+          err.textContent = data.detail || 'Failed to send code';
+          err.classList.add('show');
+          return;
+        }
+        otpGroup.classList.remove('hidden');
+        document.getElementById('otp-input').focus();
+        // In dev mode, show the code
+        if (data.dev_mode && data.code) {
+          var status = document.getElementById('otp-status');
+          status.style.display = 'block';
+          status.style.color = '#fbbf24';
+          status.textContent = 'Dev mode — your code: ' + data.code;
+        }
+      } catch (ex) {
+        err.textContent = 'Connection error. Is the server running?';
+        err.classList.add('show');
+      } finally {
+        btn.textContent = 'Send Code';
+        btn.disabled = false;
+      }
+    }
+
+    async function verifyOTP() {
+      var email = document.getElementById('email').value.trim();
+      var code = document.getElementById('otp-input').value.trim();
+      var err = document.getElementById('signup-error');
+      var status = document.getElementById('otp-status');
+      var btn = document.getElementById('verify-otp-btn');
+      err.classList.remove('show');
+
+      if (!code || code.length !== 6) {
+        err.textContent = 'Please enter the 6-digit code';
+        err.classList.add('show');
+        return;
+      }
+
+      btn.textContent = '...';
+      btn.disabled = true;
+      try {
+        var r = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, code: code })
+        });
+        var data = await r.json();
+        if (!r.ok) {
+          err.textContent = data.detail || 'Invalid code';
+          err.classList.add('show');
+          return;
+        }
+        emailVerified = true;
+        status.style.display = 'block';
+        status.style.color = '#00ff88';
+        status.textContent = 'Email verified';
+        document.getElementById('otp-input').disabled = true;
+        btn.textContent = 'Done';
+        btn.style.background = '#00ff88';
+        btn.style.borderColor = '#00ff88';
+      } catch (ex) {
+        err.textContent = 'Connection error';
+        err.classList.add('show');
+      } finally {
+        if (!emailVerified) { btn.textContent = 'Verify'; btn.disabled = false; }
+      }
     }
 
     /* ── Form submission ── */
@@ -478,6 +599,8 @@
       var password = document.getElementById('password').value;
       var confirm = document.getElementById('confirm-password').value;
       var companyLink = document.getElementById('company-link').value;
+      var companyOther = document.getElementById('company-other').value.trim();
+      var finalCompanyLink = companyLink === 'other' ? companyOther : companyLink;
 
       if (accountType === 'personal' && !fullname) {
         err.textContent = 'Please enter your full name';
@@ -496,6 +619,11 @@
       }
       if (!isValidEmail(email)) {
         err.textContent = 'Please enter a valid email address';
+        err.classList.add('show');
+        return;
+      }
+      if (!emailVerified) {
+        err.textContent = 'Please verify your email address first';
         err.classList.add('show');
         return;
       }
@@ -544,7 +672,7 @@
             display_name: displayName,
             email: email,
             email2: email2 || null,
-            company_link: companyLink || null
+            company_link: finalCompanyLink || null
           })
         });
         var data = await r.json();
@@ -623,5 +751,6 @@
       draw();
     })();
   </script>
+  <script src="/static/transition.js"></script>
 </body>
 </html>

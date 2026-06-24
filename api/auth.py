@@ -193,6 +193,12 @@ def signup(body: RegisterRequest, request: Request = None):
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
+    # Verify email if provided
+    if body.email:
+        from data.database import is_email_verified
+        if not is_email_verified(body.email):
+            raise HTTPException(status_code=400, detail="Please verify your email address before signing up")
+
     user = create_user(body.username, hash_password(body.password), body.role)
     
     # Build settings with additional signup data
@@ -247,3 +253,77 @@ def remove_user(
     if not delete_user(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     return {"deleted": True, "user_id": user_id}
+
+
+# ── Email OTP ──────────────────────────────────────────────────────────────
+
+class SendOTPRequest(BaseModel):
+    email: str
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    code: str
+
+
+def _send_email(to: str, subject: str, body: str) -> bool:
+    """Send email via SMTP. Returns True on success."""
+    import smtplib
+    from email.mime.text import MIMEText
+    host = settings.SMTP_HOST
+    port = settings.SMTP_PORT
+    user = settings.SMTP_USER
+    passwd = settings.SMTP_PASS
+    from_addr = settings.SMTP_FROM or user
+    if not all([host, user, passwd]):
+        return False
+    try:
+        msg = MIMEText(body, "html")
+        msg["Subject"] = subject
+        msg["From"] = from_addr
+        msg["To"] = to
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            server.starttls()
+            server.login(user, passwd)
+            server.sendmail(from_addr, [to], msg.as_string())
+        return True
+    except Exception:
+        return False
+
+
+@router.post("/send-otp")
+def send_otp(body: SendOTPRequest):
+    """Send a 6-digit OTP to the given email address."""
+    from data.database import create_otp
+    code = create_otp(body.email)
+    html = f"""
+    <div style="font-family:system-ui,sans-serif;max-width:400px;margin:0 auto;padding:32px;background:#081420;border-radius:12px;color:#e8f0f8">
+      <h2 style="color:#00ff88;margin:0 0 16px">OASIS-X Email Verification</h2>
+      <p style="font-size:14px;color:#6b8aa8">Your one-time verification code is:</p>
+      <div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#00ff88;text-align:center;padding:20px;background:rgba(0,255,136,0.08);border-radius:8px;margin:16px 0">{code}</div>
+      <p style="font-size:12px;color:#3d5a7a">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
+    </div>
+    """
+    sent = _send_email(body.email, "OASIS-X — Verify Your Email", html)
+    if not sent:
+        # Dev mode: return code directly if SMTP not configured
+        from config import settings as _s
+        if not _s.SMTP_HOST:
+            return {"sent": True, "dev_mode": True, "code": code}
+        raise HTTPException(status_code=500, detail="Failed to send email. Check SMTP configuration.")
+    return {"sent": True}
+
+
+@router.post("/verify-otp")
+def verify_otp_endpoint(body: VerifyOTPRequest):
+    """Verify the OTP code for an email address."""
+    from data.database import verify_otp as _verify_otp
+    if _verify_otp(body.email, body.code):
+        return {"verified": True}
+    raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+
+
+@router.post("/check-otp")
+def check_otp(body: SendOTPRequest):
+    """Check if an email has been recently verified."""
+    from data.database import is_email_verified
+    return {"verified": is_email_verified(body.email)}

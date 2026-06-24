@@ -1,0 +1,4 @@
+# OASIS-X Desktop Build Dependencies
+# Install: pip install -r requirements-desktop.txt
+-r requirements.txt
+pyinstaller>=6.0

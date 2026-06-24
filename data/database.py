@@ -105,6 +105,14 @@ def init_db():
             FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE,
             FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
         );
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp_code TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            verified INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
     """)
     # Add user_id column to existing tables if missing
     try:
@@ -579,3 +587,55 @@ def get_all_user_profiles() -> dict:
             "avatar_data": avatar_data,
         }
     return result
+
+
+# ── Email OTP Verification ────────────────────────────────────────────────
+import secrets
+from datetime import datetime, timedelta
+
+
+def create_otp(email: str) -> str:
+    """Generate a 6-digit OTP, store it, and return the code."""
+    code = f"{secrets.randbelow(900000) + 100000}"
+    expires = (datetime.now() + timedelta(minutes=10)).isoformat()
+    conn = _get_conn()
+    # Invalidate any existing OTPs for this email
+    conn.execute("UPDATE email_verifications SET verified=1 WHERE email=? AND verified=0", (email,))
+    conn.execute(
+        "INSERT INTO email_verifications (email, otp_code, expires_at) VALUES (?, ?, ?)",
+        (email, code, expires),
+    )
+    conn.commit()
+    return code
+
+
+def verify_otp(email: str, code: str) -> bool:
+    """Verify OTP is correct and not expired. Returns True on success."""
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT id, otp_code, expires_at FROM email_verifications "
+        "WHERE email=? AND verified=0 ORDER BY id DESC LIMIT 1",
+        (email,),
+    ).fetchone()
+    if not row:
+        return False
+    d = dict(row)
+    if d["otp_code"] != code:
+        return False
+    if datetime.fromisoformat(d["expires_at"]) < datetime.now():
+        return False
+    conn.execute("UPDATE email_verifications SET verified=1 WHERE id=?", (d["id"],))
+    conn.commit()
+    return True
+
+
+def is_email_verified(email: str) -> bool:
+    """Check if an email has a verified OTP within the last 15 minutes."""
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT id FROM email_verifications "
+        "WHERE email=? AND verified=1 AND created_at >= datetime('now','localtime','-15 minutes') "
+        "ORDER BY id DESC LIMIT 1",
+        (email,),
+    ).fetchone()
+    return row is not None

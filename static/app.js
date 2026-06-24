@@ -175,7 +175,7 @@ function startSessionTimer() {
 async function checkAuth() {
   const token = getToken();
   if (!token) {
-    window.location.href = '/static/login.html';
+    window.location.href = '/login';
     return;
   }
   try {
@@ -192,7 +192,7 @@ async function checkAuth() {
     afterAuth();
   } catch (e) {
     setToken(null);
-    window.location.href = '/static/login.html';
+    window.location.href = '/login';
   }
 }
 
@@ -1280,11 +1280,11 @@ function afterAuth() {
   });
   document.getElementById('dropdown-docs').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
-    window.location.href = '/static/blog.html';
+    window.location.href = '/blog';
   });
   document.getElementById('dropdown-status').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
-    window.location.href = '/static/status.html';
+    window.location.href = '/status';
   });
   document.getElementById('dropdown-support').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
@@ -1293,7 +1293,7 @@ function afterAuth() {
   document.getElementById('dropdown-logout').addEventListener('click', () => {
     profileDropdown.classList.add('hidden');
     setToken(null);
-    window.location.href = '/static/login.html';
+    window.location.href = '/login';
   });
   // Avatar upload
   document.getElementById('avatar-upload-input').addEventListener('change', async (e) => {
@@ -1700,7 +1700,7 @@ async function userFileNewCase() {
     document.getElementById('new-msg-dropdown').classList.add('hidden');
     toast('Case filed! Redirecting…', 'ok');
     // Redirect to cases.html with the new case ID
-    window.location.href = '/static/cases.html?case=' + data.complaint.id;
+    window.location.href = '/cases?case=' + data.complaint.id;
   } catch(e) { toast('Failed: ' + e.message, 'err'); }
 }
 

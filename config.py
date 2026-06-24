@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     # ── Telegram ──
     TELEGRAM_BOT_TOKEN: str = ""
 
+    # ── Email (SMTP) ──
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = ""
+
     # ── Logging ──
     LOG_LEVEL: str = "info"
 
