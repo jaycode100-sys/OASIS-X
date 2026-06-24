@@ -873,6 +873,18 @@ function toggleChat() {
   if(!p.classList.contains('hidden')) document.getElementById('chat-input').focus();
 }
 
+function closeAllPanels(except) {
+  const chatPanel = document.getElementById('chat-panel');
+  const complaintPanel = document.getElementById('complaint-panel');
+  const profileDropdown = document.getElementById('profile-dropdown');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  if (except !== 'chat' && chatPanel) { chatPanel.classList.add('hidden'); chatPanel.classList.remove('minimized'); }
+  if (except !== 'complaint' && complaintPanel) { complaintPanel.classList.add('hidden'); complaintPanel.classList.add('minimized'); const fab = document.getElementById('complaint-toggle'); if (fab) fab.classList.remove('panel-open'); }
+  if (except !== 'profile' && profileDropdown) profileDropdown.classList.add('hidden');
+  if (except !== 'sidebar' && sidebar) { sidebar.classList.remove('open'); if (sidebarOverlay) sidebarOverlay.classList.remove('active'); }
+}
+
 function minimizeChat() {
   const p = document.getElementById('chat-panel');
   p.classList.toggle('minimized');
@@ -1014,6 +1026,8 @@ async function deleteUser(id, username) {
 function toggleSidebar() {
   const s = document.getElementById('sidebar');
   const o = document.getElementById('sidebar-overlay');
+  const willOpen = !s.classList.contains('open');
+  if (willOpen) closeAllPanels('sidebar');
   s.classList.toggle('open');
   o.classList.toggle('hidden');
 }
@@ -1167,7 +1181,7 @@ function afterAuth() {
   // Nexus chat widget
   const nexusFab = document.getElementById('nexus-fab');
   const nexusBubble = document.getElementById('nexus-chat-bubble');
-  if (nexusFab) nexusFab.addEventListener('click', () => { if (nexusBubble) nexusBubble.style.display = 'none'; const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
+  if (nexusFab) nexusFab.addEventListener('click', () => { if (nexusBubble) nexusBubble.style.display = 'none'; closeAllPanels('chat'); const cp = document.getElementById('chat-panel'); cp.classList.remove('hidden'); cp.classList.remove('minimized'); document.getElementById('chat-input').focus(); });
   document.getElementById('chat-close').addEventListener('click', toggleChat);
   document.getElementById('chat-minimize').addEventListener('click', minimizeChat);
   document.getElementById('chat-send').addEventListener('click', doChat);
@@ -1242,6 +1256,8 @@ function afterAuth() {
   const profileDropdown = document.getElementById('profile-dropdown');
   document.getElementById('profile-trigger').addEventListener('click', (e) => {
     e.stopPropagation();
+    const wasHidden = profileDropdown.classList.contains('hidden');
+    closeAllPanels(wasHidden ? 'profile' : null);
     profileDropdown.classList.toggle('hidden');
   });
   profileDropdown.addEventListener('click', (e) => e.stopPropagation());
@@ -1526,6 +1542,8 @@ let _casePollTimer = null;
 function toggleComplaintPanel() {
   const p = document.getElementById('complaint-panel');
   const fab = document.getElementById('complaint-toggle');
+  const wasHidden = p.classList.contains('hidden');
+  closeAllPanels(wasHidden ? 'complaint' : null);
   p.classList.remove('minimized');
   p.classList.toggle('hidden');
   if (fab) fab.classList.toggle('panel-open', !p.classList.contains('hidden'));
