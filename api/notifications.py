@@ -9,10 +9,12 @@ import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 
+from config import settings
+
 logger = logging.getLogger("oasis-x.notifications")
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_TOKEN = settings.TELEGRAM_BOT_TOKEN or os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "https://graph.facebook.com/v17.0")
@@ -70,7 +72,7 @@ class NotificationService:
     """Service for sending notifications via Telegram and WhatsApp."""
     
     def __init__(self):
-        self.telegram_enabled = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
+        self.telegram_enabled = bool(TELEGRAM_BOT_TOKEN)
         self.whatsapp_enabled = bool(WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN)
         
         if self.telegram_enabled:

@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     SWIFT_LLM_MODEL: str = "swift-fhs"
     CHAT_MODEL: str = "nexus-chat"
 
+    # ── Telegram ──
+    TELEGRAM_BOT_TOKEN: str = ""
+
     # ── Logging ──
     LOG_LEVEL: str = "info"
 
