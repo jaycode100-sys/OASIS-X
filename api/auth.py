@@ -305,11 +305,7 @@ def send_otp(body: SendOTPRequest):
     """
     sent = _send_email(body.email, "OASIS-X — Verify Your Email", html)
     if not sent:
-        # Dev mode: return code directly if SMTP not configured
-        from config import settings as _s
-        if not _s.SMTP_HOST:
-            return {"sent": True, "dev_mode": True, "code": code}
-        raise HTTPException(status_code=500, detail="Failed to send email. Check SMTP configuration.")
+        raise HTTPException(status_code=500, detail="Failed to send verification email. Please try again.")
     return {"sent": True}
 
 

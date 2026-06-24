@@ -519,19 +519,12 @@
         });
         var data = await r.json();
         if (!r.ok) {
-          err.textContent = data.detail || 'Failed to send code';
+          err.textContent = data.detail || 'Could not send email. Please check your address and try again.';
           err.classList.add('show');
           return;
         }
         otpGroup.classList.remove('hidden');
         document.getElementById('otp-input').focus();
-        // In dev mode, show the code
-        if (data.dev_mode && data.code) {
-          var status = document.getElementById('otp-status');
-          status.style.display = 'block';
-          status.style.color = '#fbbf24';
-          status.textContent = 'Dev mode — your code: ' + data.code;
-        }
       } catch (ex) {
         err.textContent = 'Connection error. Is the server running?';
         err.classList.add('show');
