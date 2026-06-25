@@ -703,7 +703,7 @@ def get_weather(
         f"&timezone={coords['tz']}&forecast_days=1"
     )
     try:
-        r = _requests.get(url, timeout=8, headers={"User-Agent": "OASIS-X/1.0"})
+        r = _requests.get(url, timeout=15, headers={"User-Agent": "OASIS-X/1.0"})
         r.raise_for_status()
         data = r.json()
         current = data.get("current") or {}
@@ -723,8 +723,7 @@ def get_weather(
             "unit": "°C",
         }
     except Exception as e:
-        logger.warning("Weather fetch failed for %s: %s", city, e)
-        return {"city": city, "error": str(e), "icon": "🌡️", "description": "Unavailable"}
+        return {"city": city, "error": str(e), "icon": "❓", "description": "Unavailable"}
 
 
 @router.get("/weather/all")
