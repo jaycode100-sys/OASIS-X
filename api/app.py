@@ -145,9 +145,59 @@ def startup():
         logger.info("STATIC_DIR = %s (exists=%s)", STATIC_DIR, _os.path.isdir(STATIC_DIR))
         for f in ["landing.html", "index.html", "login.html", "cases.html"]:
             logger.info("  %s: %s", f, _os.path.isfile(_os.path.join(STATIC_DIR, f)))
+        # Auto-start Ollama if not running (non-blocking)
+        import threading
+        threading.Thread(target=_ensure_ollama, daemon=True).start()
         # Start Telegram polling
         from api.notifications import start_telegram_polling
         start_telegram_polling()
     except Exception as e:
         logger.critical("Startup failed: %s", e)
         sys.exit(1)
+
+
+def _ensure_ollama():
+    """Start Ollama if not already running."""
+    import urllib.request, urllib.error, subprocess
+    ollama_host = _os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    # Check if already running
+    try:
+        urllib.request.urlopen(f"{ollama_host}/api/tags", timeout=3)
+        logger.info("Ollama already running at %s", ollama_host)
+        return
+    except Exception:
+        pass
+    # Find executable
+    candidates = [
+        _os.environ.get("OLLAMA_EXE", ""),
+        r"C:\Users\USER\AppData\Local\Programs\Ollama\ollama.exe",
+        "/usr/local/bin/ollama",
+        "/usr/bin/ollama",
+    ]
+    exe = None
+    for c in candidates:
+        if c and _os.path.isfile(c):
+            exe = c
+            break
+    if not exe:
+        exe = "ollama"
+    logger.info("Starting Ollama from %s ...", exe)
+    try:
+        kwargs = {"stdout": _os.devnull, "stderr": _os.devnull}
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        subprocess.Popen([exe, "serve"], **kwargs)
+    except Exception as e:
+        logger.warning("Could not start Ollama: %s — LLM features disabled", e)
+        return
+    # Wait up to 15s
+    import time
+    for i in range(15):
+        time.sleep(1)
+        try:
+            urllib.request.urlopen(f"{ollama_host}/api/tags", timeout=3)
+            logger.info("Ollama ready (took %ds)", i + 1)
+            return
+        except Exception:
+            pass
+    logger.warning("Ollama not reachable after 15s")

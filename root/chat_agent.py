@@ -14,7 +14,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "120"))
 
 CHAT_MODEL = "nexus-chat"
-MODELS_TO_TRY = ["nexus-chat", "llama3.2:1b", "qwen2.5:0.5b", "swift-fhs"]
+MODELS_TO_TRY = ["qwen2.5:0.5b", "nexus-chat", "llama3.2:1b", "swift-fhs"]
 
 _TRACE_LOG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chat_trace.log")
 
