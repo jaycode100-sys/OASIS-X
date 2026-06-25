@@ -525,6 +525,12 @@
         }
         otpGroup.classList.remove('hidden');
         document.getElementById('otp-input').focus();
+        if (data.dev_mode && data.code) {
+          var status = document.getElementById('otp-status');
+          status.style.display = 'block';
+          status.style.color = '#fbbf24';
+          status.textContent = 'Dev mode — your code: ' + data.code;
+        }
       } catch (ex) {
         err.textContent = 'Connection error. Is the server running?';
         err.classList.add('show');

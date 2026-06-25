@@ -171,15 +171,22 @@ def get_me(current_user: dict = Depends(get_current_user)):
 @router.post("/register")
 def register(
     body: RegisterRequest,
-    _: dict = Depends(require_role("superadmin")),
+    current_user: dict = Depends(require_role("superadmin")),
 ):
     """Create a new user. Superadmin only (admin panel)."""
     existing = get_user_by_username(body.username)
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail=f'Username "{body.username}" already exists')
 
     user = create_user(body.username, hash_password(body.password), body.role)
     create_user_profile(user["id"], user["username"])
+    log_activity(
+        act_type="user_created",
+        message=f"Admin '{current_user['username']}' created user '{user['username']}' (role={user['role']})",
+        html=f'Admin <strong>{current_user["username"]}</strong> created user <strong>{user["username"]}</strong>',
+        user_id=current_user["id"],
+        username=current_user["username"],
+    )
     return {"id": user["id"], "username": user["username"], "role": user["role"]}
 
 
@@ -305,6 +312,10 @@ def send_otp(body: SendOTPRequest):
     """
     sent = _send_email(body.email, "OASIS-X — Verify Your Email", html)
     if not sent:
+        # Dev/fallback mode: return code directly if SMTP not configured or fails
+        from config import settings as _s
+        if not _s.SMTP_HOST:
+            return {"sent": True, "dev_mode": True, "code": code}
         raise HTTPException(status_code=500, detail="Failed to send verification email. Please try again.")
     return {"sent": True}
 
